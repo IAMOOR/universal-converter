@@ -181,6 +181,9 @@ export default function App() {
   const [calcHistory, setCalcHistory] = useState<{ expression: string; result: string }[]>([]);
   const [calcError, setCalcError] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>('light');
+  const [showCalcCurrency, setShowCalcCurrency] = useState(false);
+  const [calcFromCurrency, setCalcFromCurrency] = useState('USD');
+  const [calcToCurrency, setCalcToCurrency] = useState('EUR');
   const [currencyHistory, setCurrencyHistory] = useState<{
     fromAmount: string;
     fromUnit: string;
@@ -214,6 +217,7 @@ export default function App() {
       calcHistoryCard: 'bg-slate-50 border-slate-100 hover:border-blue-200 hover:bg-white',
       calcHistoryText: 'text-slate-700',
       calcHistorySub: 'text-slate-400',
+      primaryBtn: 'bg-slate-900 text-white hover:bg-slate-800',
     },
     dark: {
       bg: 'bg-slate-950',
@@ -237,6 +241,7 @@ export default function App() {
       calcHistoryCard: 'bg-slate-800 border-slate-700 hover:border-blue-900 hover:bg-slate-800',
       calcHistoryText: 'text-slate-200',
       calcHistorySub: 'text-slate-500',
+      primaryBtn: 'bg-blue-600 text-white hover:bg-blue-500',
     },
     'high-contrast': {
       bg: 'bg-black',
@@ -446,6 +451,31 @@ export default function App() {
   const handleUseInConverter = () => {
     setFromValue(calcDisplay);
     setShowCalculator(false);
+  };
+
+  const handleCalcCurrencyConvert = () => {
+    const val = parseFloat(calcDisplay);
+    if (isNaN(val)) {
+      setCalcError('Invalid number');
+      return;
+    }
+
+    if (exchangeRates[calcFromCurrency] && exchangeRates[calcToCurrency]) {
+      const valInUsd = val / exchangeRates[calcFromCurrency];
+      const result = valInUsd * exchangeRates[calcToCurrency];
+      const formattedResult = result.toFixed(2);
+      
+      setCalcHistory(prev => [{
+        expression: `${val} ${calcFromCurrency} to ${calcToCurrency}`,
+        result: formattedResult
+      }, ...prev].slice(0, 10));
+      
+      setCalcDisplay(formattedResult);
+      setCalcWaitingForOperand(true);
+      setShowCalcCurrency(false);
+    } else {
+      setCalcError('Rates not loaded');
+    }
   };
 
   // Voice Assistant Logic
@@ -780,7 +810,7 @@ export default function App() {
                   <button
                     onClick={handleCopy}
                     disabled={!toValue}
-                    className="w-full bg-slate-900 text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'high-contrast' ? 'bg-white text-black border-2 border-black font-black' : s.primaryBtn}`}
                   >
                     {copied ? (
                       <>
@@ -843,7 +873,15 @@ export default function App() {
                 className="p-6"
               >
                 <div className={`rounded-2xl p-4 mb-4 text-right transition-all border ${s.calcDisplay} ${calcError ? 'ring-2 ring-red-500 border-red-500' : 'border-transparent'}`}>
-                  <div className="text-xs h-4 mb-1">
+                  <div className="text-xs h-4 mb-1 flex justify-between items-center">
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setShowCalcCurrency(!showCalcCurrency)}
+                        className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md transition-colors ${showCalcCurrency ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+                      >
+                        FX Convert
+                      </button>
+                    </div>
                     {calcError ? (
                       <span className="text-red-400 font-bold uppercase tracking-widest">Error</span>
                     ) : (
@@ -854,6 +892,56 @@ export default function App() {
                     {calcError || calcDisplay}
                   </div>
                 </div>
+
+                <AnimatePresence>
+                  {showCalcCurrency && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden mb-4"
+                    >
+                      <div className={`p-4 rounded-2xl border ${theme === 'high-contrast' ? 'bg-black border-white' : 'bg-slate-50 border-slate-100'} space-y-3`}>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${s.label}`}>Currency Converter</span>
+                          <button onClick={() => setShowCalcCurrency(false)} className="text-slate-400 hover:text-red-500"><X size={14} /></button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <label className={`text-[9px] font-bold uppercase tracking-widest ml-1 ${s.label}`}>From</label>
+                            <select
+                              value={calcFromCurrency}
+                              onChange={(e) => setCalcFromCurrency(e.target.value)}
+                              className={`w-full p-2 rounded-xl text-xs font-bold border outline-none transition-colors ${theme === 'high-contrast' ? 'bg-black text-white border-white' : 'bg-white border-slate-200 text-slate-700'}`}
+                            >
+                              {CATEGORIES['Currency'].units.map(u => (
+                                <option key={u.value} value={u.value}>{u.value}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className={`text-[9px] font-bold uppercase tracking-widest ml-1 ${s.label}`}>To</label>
+                            <select
+                              value={calcToCurrency}
+                              onChange={(e) => setCalcToCurrency(e.target.value)}
+                              className={`w-full p-2 rounded-xl text-xs font-bold border outline-none transition-colors ${theme === 'high-contrast' ? 'bg-black text-white border-white' : 'bg-white border-slate-200 text-slate-700'}`}
+                            >
+                              {CATEGORIES['Currency'].units.map(u => (
+                                <option key={u.value} value={u.value}>{u.value}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleCalcCurrencyConvert}
+                          className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all active:scale-[0.98] ${theme === 'high-contrast' ? 'bg-white text-black' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                        >
+                          Convert {calcDisplay} {calcFromCurrency}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {calcHistory.length > 0 && (
                   <div className="mb-6 space-y-2">
@@ -923,7 +1011,7 @@ export default function App() {
 
                 <button
                   onClick={handleUseInConverter}
-                  className={`w-full mt-4 py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${theme === 'high-contrast' ? 'bg-white text-black border-2 border-black font-black' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
+                  className={`w-full mt-4 py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${theme === 'high-contrast' ? 'bg-white text-black border-2 border-black font-black' : s.primaryBtn}`}
                 >
                   Use in Converter
                 </button>
