@@ -162,6 +162,7 @@ export default function App() {
   const [toValue, setToValue] = useState<string>('');
   const [showCalculator, setShowCalculator] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [converterError, setConverterError] = useState<string | null>(null);
 
   // Calculator state
   const [calcDisplay, setCalcDisplay] = useState('0');
@@ -169,6 +170,14 @@ export default function App() {
   const [calcOperator, setCalcOperator] = useState<string | null>(null);
   const [calcWaitingForOperand, setCalcWaitingForOperand] = useState(false);
   const [calcHistory, setCalcHistory] = useState<{ expression: string; result: string }[]>([]);
+  const [calcError, setCalcError] = useState<string | null>(null);
+  const [currencyHistory, setCurrencyHistory] = useState<{
+    fromAmount: string;
+    fromUnit: string;
+    toAmount: string;
+    toUnit: string;
+    date: string;
+  }[]>([]);
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [loadingRates, setLoadingRates] = useState(false);
 
@@ -192,11 +201,20 @@ export default function App() {
   }, []);
 
   const convert = useCallback(() => {
+    if (!fromValue) {
+      setToValue('');
+      setConverterError(null);
+      return;
+    }
+
     const val = parseFloat(fromValue);
     if (isNaN(val)) {
       setToValue('');
+      setConverterError('Please enter a valid number');
       return;
     }
+
+    setConverterError(null);
 
     if (category === 'Temperature') {
       if (fromUnit === toUnit) {
@@ -246,6 +264,17 @@ export default function App() {
   const handleCopy = () => {
     navigator.clipboard.writeText(toValue);
     setCopied(true);
+    
+    if (category === 'Currency' && fromValue && toValue) {
+      setCurrencyHistory(prev => [{
+        fromAmount: fromValue,
+        fromUnit: fromUnit,
+        toAmount: toValue,
+        toUnit: toUnit,
+        date: new Date().toLocaleString()
+      }, ...prev].slice(0, 10));
+    }
+    
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -258,6 +287,7 @@ export default function App() {
 
   // Calculator Logic
   const inputDigit = (digit: string) => {
+    setCalcError(null);
     if (calcWaitingForOperand) {
       setCalcDisplay(digit);
       setCalcWaitingForOperand(false);
@@ -267,6 +297,7 @@ export default function App() {
   };
 
   const inputDot = () => {
+    setCalcError(null);
     if (calcWaitingForOperand) {
       setCalcDisplay('0.');
       setCalcWaitingForOperand(false);
@@ -282,6 +313,7 @@ export default function App() {
     setCalcPrevValue(null);
     setCalcOperator(null);
     setCalcWaitingForOperand(false);
+    setCalcError(null);
   };
 
   const performOperation = (nextOperator: string) => {
@@ -291,6 +323,15 @@ export default function App() {
       setCalcPrevValue(inputValue);
     } else if (calcOperator) {
       const currentValue = calcPrevValue || 0;
+      
+      if (calcOperator === '/' && inputValue === 0) {
+        setCalcError('Cannot divide by zero');
+        setCalcPrevValue(null);
+        setCalcOperator(null);
+        setCalcWaitingForOperand(true);
+        return;
+      }
+
       const newValue = calculate(currentValue, inputValue, calcOperator);
       
       if (nextOperator === '=') {
@@ -305,7 +346,7 @@ export default function App() {
     }
 
     setCalcWaitingForOperand(true);
-    setCalcOperator(nextOperator);
+    setCalcOperator(nextOperator === '=' ? null : nextOperator);
   };
 
   const calculate = (prev: number, next: number, op: string) => {
@@ -531,10 +572,18 @@ export default function App() {
                   </div>
                   <div className="relative group">
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       value={fromValue}
-                      onChange={(e) => setFromValue(e.target.value)}
-                      className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl px-4 py-4 text-2xl font-semibold outline-none transition-all"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || /^-?\d*\.?\d*$/.test(val)) {
+                          setFromValue(val);
+                        }
+                      }}
+                      className={`w-full bg-slate-50 border-2 rounded-2xl px-4 py-4 text-2xl font-semibold outline-none transition-all ${
+                        converterError ? 'border-red-500 focus:border-red-500' : 'border-transparent focus:border-blue-500 focus:bg-white'
+                      }`}
                       placeholder="0"
                     />
                     <div className="absolute right-2 top-2 bottom-2 w-40">
@@ -550,6 +599,11 @@ export default function App() {
                       <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
                   </div>
+                  {converterError && (
+                    <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider ml-1 animate-pulse">
+                      {converterError}
+                    </p>
+                  )}
                 </div>
 
                 {/* Swap Button */}
@@ -622,6 +676,44 @@ export default function App() {
                     )}
                   </button>
                 </div>
+
+                {/* Currency History */}
+                {category === 'Currency' && currencyHistory.length > 0 && (
+                  <div className="mt-8 space-y-3">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                      <History size={12} />
+                      Currency History
+                    </div>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                      {currencyHistory.map((item, idx) => (
+                        <div 
+                          key={idx}
+                          className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex justify-between items-center group hover:border-blue-100 transition-colors"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-slate-700">{item.fromAmount} {item.fromUnit}</span>
+                              <ArrowRightLeft size={10} className="text-slate-300" />
+                              <span className="text-sm font-bold text-blue-600">{item.toAmount} {item.toUnit}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400">{item.date}</div>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              setFromValue(item.fromAmount);
+                              setFromUnit(item.fromUnit);
+                              setToUnit(item.toUnit);
+                            }}
+                            className="p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-white transition-all opacity-0 group-hover:opacity-100"
+                            title="Restore"
+                          >
+                            <History size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ) : (
               <motion.div
@@ -631,34 +723,57 @@ export default function App() {
                 exit={{ opacity: 0, x: -20 }}
                 className="p-6"
               >
-                <div className="bg-slate-900 rounded-2xl p-4 mb-4 text-right">
+                <div className={`bg-slate-900 rounded-2xl p-4 mb-4 text-right transition-all ${calcError ? 'ring-2 ring-red-500' : ''}`}>
                   <div className="text-slate-500 text-xs h-4 mb-1">
-                    {calcPrevValue !== null ? `${calcPrevValue} ${calcOperator || ''}` : ''}
+                    {calcError ? (
+                      <span className="text-red-400 font-bold uppercase tracking-widest">Error</span>
+                    ) : (
+                      calcPrevValue !== null ? `${calcPrevValue} ${calcOperator || ''}` : ''
+                    )}
                   </div>
-                  <div className="text-white text-3xl font-mono font-bold truncate">
-                    {calcDisplay}
+                  <div className={`text-white text-3xl font-mono font-bold truncate ${calcError ? 'text-red-400' : ''}`}>
+                    {calcError || calcDisplay}
                   </div>
                 </div>
 
                 {calcHistory.length > 0 && (
-                  <div className="mb-4 space-y-2 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                      <History size={10} />
-                      History
-                    </div>
-                    {calcHistory.map((item, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => {
-                          setCalcDisplay(item.result);
-                          setCalcWaitingForOperand(true);
-                        }}
-                        className="w-full text-left p-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors group"
+                  <div className="mb-6 space-y-2">
+                    <div className="flex items-center justify-between px-1 mb-2">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        <History size={12} />
+                        Calculation History
+                      </div>
+                      <button 
+                        onClick={() => setCalcHistory([])}
+                        className="text-[10px] font-bold text-red-400 uppercase tracking-widest hover:text-red-500 transition-colors"
                       >
-                        <div className="text-[10px] text-slate-400 group-hover:text-slate-500">{item.expression} =</div>
-                        <div className="text-sm font-mono font-bold text-slate-700 group-hover:text-blue-600">{item.result}</div>
+                        Clear
                       </button>
-                    ))}
+                    </div>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                      {calcHistory.map((item, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setCalcDisplay(item.result);
+                            setCalcWaitingForOperand(true);
+                          }}
+                          className="w-full text-left p-3 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-200 hover:bg-white transition-all group"
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="text-[10px] font-medium text-slate-400 group-hover:text-slate-500 truncate mr-2">
+                              {item.expression} =
+                            </div>
+                            <div className="text-xs font-bold text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                              Reuse
+                            </div>
+                          </div>
+                          <div className="text-lg font-mono font-bold text-slate-700 group-hover:text-blue-600">
+                            {item.result}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 
