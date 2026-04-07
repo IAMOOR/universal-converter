@@ -27,12 +27,16 @@ import {
   VolumeX,
   Loader2,
   History,
-  Coins
+  Coins,
+  Sun,
+  Moon,
+  Contrast
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
 
 type Category = 'Weight' | 'Length' | 'Volume' | 'Temperature' | 'Currency';
+type Theme = 'light' | 'dark' | 'high-contrast';
 
 interface Unit {
   label: string;
@@ -128,8 +132,9 @@ const CATEGORIES: Record<Category, { icon: any; units: Unit[] }> = {
 const SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 2048;
 
-function Tooltip({ text }: { text: string }) {
+function Tooltip({ text, theme }: { text: string; theme: Theme }) {
   const [isOpen, setIsOpen] = useState(false);
+  const isHighContrast = theme === 'high-contrast';
 
   return (
     <div 
@@ -138,13 +143,17 @@ function Tooltip({ text }: { text: string }) {
       onMouseLeave={() => setIsOpen(false)}
       onClick={() => setIsOpen(!isOpen)}
     >
-      <div className={`p-1 rounded-full transition-colors ${isOpen ? 'bg-blue-50 text-blue-500' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'} cursor-help`}>
+      <div className={`p-1 rounded-full transition-colors ${
+        isOpen 
+          ? (isHighContrast ? 'bg-white text-black' : 'bg-blue-50 text-blue-500') 
+          : (isHighContrast ? 'bg-black border border-white text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600')
+      } cursor-help`}>
         <Info size={14} />
       </div>
       <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-3 pointer-events-none transition-all duration-200 w-56 z-[100] ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'}`}>
-        <div className="bg-slate-900 text-white text-[11px] py-2.5 px-4 rounded-2xl shadow-2xl border border-slate-700 leading-relaxed text-center backdrop-blur-sm bg-opacity-95">
+        <div className={`${isHighContrast ? 'bg-white text-black border-2 border-black' : 'bg-slate-900 text-white border border-slate-700 backdrop-blur-sm bg-opacity-95'} text-[11px] py-2.5 px-4 rounded-2xl shadow-2xl leading-relaxed text-center`}>
           {text}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-900" />
+          <div className={`absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent ${isHighContrast ? 'border-t-white' : 'border-t-slate-900'}`} />
         </div>
       </div>
     </div>
@@ -171,6 +180,7 @@ export default function App() {
   const [calcWaitingForOperand, setCalcWaitingForOperand] = useState(false);
   const [calcHistory, setCalcHistory] = useState<{ expression: string; result: string }[]>([]);
   const [calcError, setCalcError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<Theme>('light');
   const [currencyHistory, setCurrencyHistory] = useState<{
     fromAmount: string;
     fromUnit: string;
@@ -180,6 +190,80 @@ export default function App() {
   }[]>([]);
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [loadingRates, setLoadingRates] = useState(false);
+
+  const themeStyles = {
+    light: {
+      bg: 'bg-slate-50',
+      card: 'bg-white border-slate-100 shadow-slate-200/50',
+      header: 'bg-slate-900 text-white',
+      tabs: 'bg-slate-100',
+      tabActive: 'bg-white text-blue-600 shadow-sm',
+      tabInactive: 'text-slate-500 hover:bg-slate-200/50',
+      input: 'bg-slate-50 border-transparent focus:border-blue-500 focus:bg-white text-slate-900',
+      inputTo: 'bg-blue-50/50 text-blue-700 border-transparent',
+      label: 'text-slate-400',
+      desc: 'text-slate-500',
+      historyCard: 'bg-slate-50 border-slate-100 hover:border-blue-100',
+      historyText: 'text-slate-700',
+      historySub: 'text-slate-400',
+      calcDisplay: 'bg-slate-900 text-white',
+      calcPrev: 'text-slate-500',
+      calcBtn: 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+      calcBtnOp: 'bg-blue-500 text-white hover:bg-blue-600',
+      calcBtnEq: 'bg-slate-900 text-white hover:bg-slate-800',
+      calcHistoryCard: 'bg-slate-50 border-slate-100 hover:border-blue-200 hover:bg-white',
+      calcHistoryText: 'text-slate-700',
+      calcHistorySub: 'text-slate-400',
+    },
+    dark: {
+      bg: 'bg-slate-950',
+      card: 'bg-slate-900 border-slate-800 shadow-black/50',
+      header: 'bg-slate-950 text-white',
+      tabs: 'bg-slate-950',
+      tabActive: 'bg-slate-800 text-blue-400 shadow-sm',
+      tabInactive: 'text-slate-500 hover:bg-slate-800/50',
+      input: 'bg-slate-800 border-transparent focus:border-blue-500 focus:bg-slate-800 text-white',
+      inputTo: 'bg-blue-900/20 text-blue-300 border-transparent',
+      label: 'text-slate-500',
+      desc: 'text-slate-400',
+      historyCard: 'bg-slate-800 border-slate-700 hover:border-blue-900',
+      historyText: 'text-slate-200',
+      historySub: 'text-slate-500',
+      calcDisplay: 'bg-slate-950 text-white',
+      calcPrev: 'text-slate-600',
+      calcBtn: 'bg-slate-800 text-slate-200 hover:bg-slate-700',
+      calcBtnOp: 'bg-blue-600 text-white hover:bg-blue-500',
+      calcBtnEq: 'bg-slate-950 text-white hover:bg-slate-800',
+      calcHistoryCard: 'bg-slate-800 border-slate-700 hover:border-blue-900 hover:bg-slate-800',
+      calcHistoryText: 'text-slate-200',
+      calcHistorySub: 'text-slate-500',
+    },
+    'high-contrast': {
+      bg: 'bg-black',
+      card: 'bg-black border-4 border-white shadow-none',
+      header: 'bg-black border-b-4 border-white text-white',
+      tabs: 'bg-black',
+      tabActive: 'bg-white text-black border-2 border-black',
+      tabInactive: 'text-white border-2 border-transparent hover:border-white',
+      input: 'bg-black border-2 border-white focus:border-yellow-400 text-white',
+      inputTo: 'bg-black border-2 border-white text-yellow-400',
+      label: 'text-white font-bold',
+      desc: 'text-yellow-400 font-bold',
+      historyCard: 'bg-black border-2 border-white hover:border-yellow-400',
+      historyText: 'text-white',
+      historySub: 'text-yellow-400',
+      calcDisplay: 'bg-black border-2 border-white text-white',
+      calcPrev: 'text-yellow-400',
+      calcBtn: 'bg-black border-2 border-white text-white hover:bg-white hover:text-black',
+      calcBtnOp: 'bg-white text-black font-black',
+      calcBtnEq: 'bg-yellow-400 text-black font-black',
+      calcHistoryCard: 'bg-black border-2 border-white hover:border-yellow-400 hover:bg-white hover:text-black',
+      calcHistoryText: 'text-white',
+      calcHistorySub: 'text-yellow-400',
+    }
+  };
+
+  const s = themeStyles[theme];
 
   const fetchRates = async () => {
     setLoadingRates(true);
@@ -491,17 +575,40 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans text-slate-900">
+    <div className={`min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-300 ${s.bg}`}>
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100"
+        className={`w-full max-w-md rounded-3xl shadow-xl border transition-all duration-300 ${s.card}`}
       >
         {/* Header */}
-        <div className="p-6 bg-slate-900 text-white">
+        <div className={`p-6 rounded-t-3xl transition-colors duration-300 ${s.header}`}>
           <div className="flex justify-between items-center mb-2">
             <h1 className="text-xl font-semibold tracking-tight">Converter</h1>
             <div className="flex gap-2">
+              <div className="flex bg-slate-800/50 p-1 rounded-xl gap-1 mr-2">
+                <button 
+                  onClick={() => setTheme('light')}
+                  className={`p-1.5 rounded-lg transition-all ${theme === 'light' ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-white'}`}
+                  title="Light Mode"
+                >
+                  <Sun size={14} />
+                </button>
+                <button 
+                  onClick={() => setTheme('dark')}
+                  className={`p-1.5 rounded-lg transition-all ${theme === 'dark' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                  title="Dark Mode"
+                >
+                  <Moon size={14} />
+                </button>
+                <button 
+                  onClick={() => setTheme('high-contrast')}
+                  className={`p-1.5 rounded-lg transition-all ${theme === 'high-contrast' ? 'bg-yellow-400 text-black' : 'text-slate-400 hover:text-white'}`}
+                  title="High Contrast"
+                >
+                  <Contrast size={14} />
+                </button>
+              </div>
               <button 
                 onClick={toggleVoice}
                 className={`p-2 rounded-xl transition-all ${isVoiceActive ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
@@ -533,7 +640,7 @@ export default function App() {
         </div>
 
         {/* Category Tabs */}
-        <div className="flex p-2 bg-slate-100 gap-1">
+        <div className={`flex p-2 gap-1 transition-colors ${s.tabs}`}>
           {(Object.keys(CATEGORIES) as Category[]).map((cat) => {
             const Icon = CATEGORIES[cat].icon;
             const isActive = category === cat;
@@ -543,8 +650,8 @@ export default function App() {
                 onClick={() => setCategory(cat)}
                 className={`flex-1 flex flex-col items-center py-3 px-1 rounded-2xl transition-all duration-200 ${
                   isActive 
-                    ? 'bg-white text-blue-600 shadow-sm' 
-                    : 'text-slate-500 hover:bg-slate-200/50'
+                    ? s.tabActive 
+                    : s.tabInactive
                 }`}
               >
                 <Icon size={20} className="mb-1" />
@@ -567,8 +674,8 @@ export default function App() {
                 {/* From Section */}
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">From</label>
-                    <Tooltip text={CATEGORIES[category].units.find(u => u.value === fromUnit)?.description || ''} />
+                    <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>From</label>
+                    <Tooltip text={CATEGORIES[category].units.find(u => u.value === fromUnit)?.description || ''} theme={theme} />
                   </div>
                   <div className="relative group">
                     <input
@@ -581,8 +688,8 @@ export default function App() {
                           setFromValue(val);
                         }
                       }}
-                      className={`w-full bg-slate-50 border-2 rounded-2xl px-4 py-4 text-2xl font-semibold outline-none transition-all ${
-                        converterError ? 'border-red-500 focus:border-red-500' : 'border-transparent focus:border-blue-500 focus:bg-white'
+                      className={`w-full border-2 rounded-2xl px-4 py-4 text-2xl font-semibold outline-none transition-all ${
+                        converterError ? 'border-red-500 focus:border-red-500' : `focus:border-blue-500 ${s.input}`
                       }`}
                       placeholder="0"
                     />
@@ -590,7 +697,7 @@ export default function App() {
                       <select
                         value={fromUnit}
                         onChange={(e) => setFromUnit(e.target.value)}
-                        className="w-full h-full bg-white border border-slate-200 rounded-xl px-3 text-sm font-medium appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 outline-none"
+                        className={`w-full h-full border rounded-xl px-3 text-sm font-medium appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${theme === 'high-contrast' ? 'bg-black text-white border-white' : 'bg-white border-slate-200'}`}
                       >
                         {CATEGORIES[category].units.map((u) => (
                           <option key={u.value} value={u.value}>{u.label}</option>
@@ -598,6 +705,12 @@ export default function App() {
                       </select>
                       <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
+                  </div>
+                  <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
+                    <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
+                    <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
+                      {CATEGORIES[category].units.find(u => u.value === fromUnit)?.description}
+                    </p>
                   </div>
                   {converterError && (
                     <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider ml-1 animate-pulse">
@@ -610,7 +723,7 @@ export default function App() {
                 <div className="flex justify-center -my-3 relative z-10">
                   <button 
                     onClick={swapUnits}
-                    className="bg-white border border-slate-200 p-3 rounded-full text-slate-400 hover:text-blue-500 hover:border-blue-200 shadow-sm transition-all active:scale-95"
+                    className={`p-3 rounded-full border shadow-sm transition-all active:scale-95 ${theme === 'high-contrast' ? 'bg-black border-white text-white hover:bg-white hover:text-black' : 'bg-white border-slate-200 text-slate-400 hover:text-blue-500 hover:border-blue-200'}`}
                   >
                     <ArrowRightLeft size={18} />
                   </button>
@@ -620,8 +733,8 @@ export default function App() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">To</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === toUnit)?.description || ''} />
+                      <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>To</label>
+                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === toUnit)?.description || ''} theme={theme} />
                     </div>
                     {category === 'Currency' && (
                       <button 
@@ -638,14 +751,14 @@ export default function App() {
                       type="text"
                       readOnly
                       value={toValue}
-                      className="w-full bg-blue-50/50 border-2 border-transparent rounded-2xl px-4 py-4 text-2xl font-semibold text-blue-700 outline-none"
+                      className={`w-full border-2 rounded-2xl px-4 py-4 text-2xl font-semibold outline-none transition-all ${s.inputTo}`}
                       placeholder="0"
                     />
                     <div className="absolute right-2 top-2 bottom-2 w-40">
                       <select
                         value={toUnit}
                         onChange={(e) => setToUnit(e.target.value)}
-                        className="w-full h-full bg-white border border-slate-200 rounded-xl px-3 text-sm font-medium appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 outline-none"
+                        className={`w-full h-full border rounded-xl px-3 text-sm font-medium appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${theme === 'high-contrast' ? 'bg-black text-white border-white' : 'bg-white border-slate-200'}`}
                       >
                         {CATEGORIES[category].units.map((u) => (
                           <option key={u.value} value={u.value}>{u.label}</option>
@@ -653,6 +766,12 @@ export default function App() {
                       </select>
                       <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
+                  </div>
+                  <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
+                    <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
+                    <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
+                      {CATEGORIES[category].units.find(u => u.value === toUnit)?.description}
+                    </p>
                   </div>
                 </div>
 
@@ -680,7 +799,7 @@ export default function App() {
                 {/* Currency History */}
                 {category === 'Currency' && currencyHistory.length > 0 && (
                   <div className="mt-8 space-y-3">
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                    <div className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest px-1 ${s.label}`}>
                       <History size={12} />
                       Currency History
                     </div>
@@ -688,15 +807,15 @@ export default function App() {
                       {currencyHistory.map((item, idx) => (
                         <div 
                           key={idx}
-                          className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex justify-between items-center group hover:border-blue-100 transition-colors"
+                          className={`border rounded-2xl p-4 flex justify-between items-center group transition-colors ${s.historyCard}`}
                         >
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-slate-700">{item.fromAmount} {item.fromUnit}</span>
+                              <span className={`text-sm font-bold ${s.historyText}`}>{item.fromAmount} {item.fromUnit}</span>
                               <ArrowRightLeft size={10} className="text-slate-300" />
                               <span className="text-sm font-bold text-blue-600">{item.toAmount} {item.toUnit}</span>
                             </div>
-                            <div className="text-[10px] text-slate-400">{item.date}</div>
+                            <div className={`text-[10px] ${s.historySub}`}>{item.date}</div>
                           </div>
                           <button 
                             onClick={() => {
@@ -704,7 +823,7 @@ export default function App() {
                               setFromUnit(item.fromUnit);
                               setToUnit(item.toUnit);
                             }}
-                            className="p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-white transition-all opacity-0 group-hover:opacity-100"
+                            className={`p-2 rounded-xl transition-all opacity-0 group-hover:opacity-100 ${theme === 'high-contrast' ? 'text-white hover:text-yellow-400' : 'text-slate-400 hover:text-blue-500 hover:bg-white'}`}
                             title="Restore"
                           >
                             <History size={16} />
@@ -723,15 +842,15 @@ export default function App() {
                 exit={{ opacity: 0, x: -20 }}
                 className="p-6"
               >
-                <div className={`bg-slate-900 rounded-2xl p-4 mb-4 text-right transition-all ${calcError ? 'ring-2 ring-red-500' : ''}`}>
-                  <div className="text-slate-500 text-xs h-4 mb-1">
+                <div className={`rounded-2xl p-4 mb-4 text-right transition-all border ${s.calcDisplay} ${calcError ? 'ring-2 ring-red-500 border-red-500' : 'border-transparent'}`}>
+                  <div className="text-xs h-4 mb-1">
                     {calcError ? (
                       <span className="text-red-400 font-bold uppercase tracking-widest">Error</span>
                     ) : (
-                      calcPrevValue !== null ? `${calcPrevValue} ${calcOperator || ''}` : ''
+                      <span className={s.calcPrev}>{calcPrevValue !== null ? `${calcPrevValue} ${calcOperator || ''}` : ''}</span>
                     )}
                   </div>
-                  <div className={`text-white text-3xl font-mono font-bold truncate ${calcError ? 'text-red-400' : ''}`}>
+                  <div className={`text-3xl font-mono font-bold truncate ${calcError ? 'text-red-400' : ''}`}>
                     {calcError || calcDisplay}
                   </div>
                 </div>
@@ -739,7 +858,7 @@ export default function App() {
                 {calcHistory.length > 0 && (
                   <div className="mb-6 space-y-2">
                     <div className="flex items-center justify-between px-1 mb-2">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${s.label}`}>
                         <History size={12} />
                         Calculation History
                       </div>
@@ -758,17 +877,17 @@ export default function App() {
                             setCalcDisplay(item.result);
                             setCalcWaitingForOperand(true);
                           }}
-                          className="w-full text-left p-3 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-200 hover:bg-white transition-all group"
+                          className={`w-full text-left p-3 rounded-2xl border transition-all group ${s.calcHistoryCard}`}
                         >
                           <div className="flex justify-between items-center">
-                            <div className="text-[10px] font-medium text-slate-400 group-hover:text-slate-500 truncate mr-2">
+                            <div className={`text-[10px] font-medium truncate mr-2 ${s.calcHistorySub}`}>
                               {item.expression} =
                             </div>
                             <div className="text-xs font-bold text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
                               Reuse
                             </div>
                           </div>
-                          <div className="text-lg font-mono font-bold text-slate-700 group-hover:text-blue-600">
+                          <div className={`text-lg font-mono font-bold group-hover:text-blue-600 ${s.calcHistoryText}`}>
                             {item.result}
                           </div>
                         </button>
@@ -778,33 +897,33 @@ export default function App() {
                 )}
 
                 <div className="grid grid-cols-4 gap-2">
-                  <button onClick={clearCalc} className="col-span-2 bg-red-50 text-red-600 py-4 rounded-xl font-bold hover:bg-red-100 transition-colors">AC</button>
-                  <button onClick={() => setCalcDisplay(calcDisplay.slice(0, -1) || '0')} className="bg-slate-100 text-slate-600 py-4 rounded-xl font-bold hover:bg-slate-200 transition-colors flex items-center justify-center"><Delete size={18} /></button>
-                  <button onClick={() => performOperation('/')} className="bg-blue-50 text-blue-600 py-4 rounded-xl font-bold hover:bg-blue-100 transition-colors flex items-center justify-center"><Divide size={18} /></button>
+                  <button onClick={clearCalc} className={`col-span-2 py-4 rounded-xl font-bold transition-all active:scale-95 ${theme === 'high-contrast' ? 'bg-black border-2 border-white text-white hover:bg-white hover:text-black' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}>AC</button>
+                  <button onClick={() => setCalcDisplay(calcDisplay.slice(0, -1) || '0')} className={`py-4 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center ${s.calcBtn}`}><Delete size={18} /></button>
+                  <button onClick={() => performOperation('/')} className={`py-4 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center ${calcOperator === '/' ? 'ring-2 ring-blue-400' : ''} ${s.calcBtnOp}`}><Divide size={18} /></button>
                   
                   {[7, 8, 9].map(n => (
-                    <button key={n} onClick={() => inputDigit(String(n))} className="bg-slate-50 text-slate-700 py-4 rounded-xl font-bold hover:bg-slate-100 transition-colors">{n}</button>
+                    <button key={n} onClick={() => inputDigit(String(n))} className={`py-4 rounded-xl font-bold transition-all active:scale-95 ${s.calcBtn}`}>{n}</button>
                   ))}
-                  <button onClick={() => performOperation('*')} className="bg-blue-50 text-blue-600 py-4 rounded-xl font-bold hover:bg-blue-100 transition-colors flex items-center justify-center"><X size={18} /></button>
+                  <button onClick={() => performOperation('*')} className={`py-4 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center ${calcOperator === '*' ? 'ring-2 ring-blue-400' : ''} ${s.calcBtnOp}`}><X size={18} /></button>
                   
                   {[4, 5, 6].map(n => (
-                    <button key={n} onClick={() => inputDigit(String(n))} className="bg-slate-50 text-slate-700 py-4 rounded-xl font-bold hover:bg-slate-100 transition-colors">{n}</button>
+                    <button key={n} onClick={() => inputDigit(String(n))} className={`py-4 rounded-xl font-bold transition-all active:scale-95 ${s.calcBtn}`}>{n}</button>
                   ))}
-                  <button onClick={() => performOperation('-')} className="bg-blue-50 text-blue-600 py-4 rounded-xl font-bold hover:bg-blue-100 transition-colors flex items-center justify-center"><Minus size={18} /></button>
+                  <button onClick={() => performOperation('-')} className={`py-4 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center ${calcOperator === '-' ? 'ring-2 ring-blue-400' : ''} ${s.calcBtnOp}`}><Minus size={18} /></button>
                   
                   {[1, 2, 3].map(n => (
-                    <button key={n} onClick={() => inputDigit(String(n))} className="bg-slate-50 text-slate-700 py-4 rounded-xl font-bold hover:bg-slate-100 transition-colors">{n}</button>
+                    <button key={n} onClick={() => inputDigit(String(n))} className={`py-4 rounded-xl font-bold transition-all active:scale-95 ${s.calcBtn}`}>{n}</button>
                   ))}
-                  <button onClick={() => performOperation('+')} className="bg-blue-50 text-blue-600 py-4 rounded-xl font-bold hover:bg-blue-100 transition-colors flex items-center justify-center"><Plus size={18} /></button>
+                  <button onClick={() => performOperation('+')} className={`py-4 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center ${calcOperator === '+' ? 'ring-2 ring-blue-400' : ''} ${s.calcBtnOp}`}><Plus size={18} /></button>
                   
-                  <button onClick={() => inputDigit('0')} className="col-span-2 bg-slate-50 text-slate-700 py-4 rounded-xl font-bold hover:bg-slate-100 transition-colors">0</button>
-                  <button onClick={inputDot} className="bg-slate-50 text-slate-700 py-4 rounded-xl font-bold hover:bg-slate-100 transition-colors">.</button>
-                  <button onClick={() => performOperation('=')} className="bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center justify-center shadow-lg shadow-blue-200"><Equal size={18} /></button>
+                  <button onClick={() => inputDigit('0')} className={`col-span-2 py-4 rounded-xl font-bold transition-all active:scale-95 ${s.calcBtn}`}>0</button>
+                  <button onClick={inputDot} className={`py-4 rounded-xl font-bold transition-all active:scale-95 ${s.calcBtn}`}>.</button>
+                  <button onClick={() => performOperation('=')} className={`py-4 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center ${s.calcBtnEq}`}><Equal size={18} /></button>
                 </div>
 
                 <button
                   onClick={handleUseInConverter}
-                  className="w-full mt-4 bg-slate-900 text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors"
+                  className={`w-full mt-4 py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${theme === 'high-contrast' ? 'bg-white text-black border-2 border-black font-black' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
                 >
                   Use in Converter
                 </button>
@@ -814,8 +933,8 @@ export default function App() {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 text-center">
-          <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+        <div className={`px-6 py-4 border-t text-center transition-colors ${theme === 'high-contrast' ? 'bg-black border-white' : 'bg-slate-50 border-slate-100'}`}>
+          <p className={`text-[10px] uppercase tracking-widest font-bold ${s.label}`}>
             Universal Metric Converter & Calculator
           </p>
         </div>
