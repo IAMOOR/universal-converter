@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Scale, 
   Ruler, 
@@ -193,6 +193,14 @@ export default function App() {
   }[]>([]);
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [loadingRates, setLoadingRates] = useState(false);
+
+  const { activeFromUnit, activeToUnit } = useMemo(() => {
+    const units = CATEGORIES[category].units;
+    return {
+      activeFromUnit: units.find((u) => u.value === fromUnit),
+      activeToUnit: units.find((u) => u.value === toUnit)
+    };
+  }, [category, fromUnit, toUnit]);
 
   const themeStyles = {
     light: {
@@ -705,7 +713,7 @@ export default function App() {
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>From</label>
-                    <Tooltip text={CATEGORIES[category].units.find(u => u.value === fromUnit)?.description || ''} theme={theme} />
+                    <Tooltip text={activeFromUnit?.description || ''} theme={theme} />
                   </div>
                   <div className="relative group">
                     <input
@@ -739,7 +747,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === fromUnit)?.description}
+                      {activeFromUnit?.description}
                     </p>
                   </div>
                   {converterError && (
@@ -764,7 +772,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>To</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === toUnit)?.description || ''} theme={theme} />
+                      <Tooltip text={activeToUnit?.description || ''} theme={theme} />
                     </div>
                     {category === 'Currency' && (
                       <button 
@@ -800,7 +808,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === toUnit)?.description}
+                      {activeToUnit?.description}
                     </p>
                   </div>
                 </div>
