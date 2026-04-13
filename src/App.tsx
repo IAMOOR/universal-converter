@@ -550,7 +550,14 @@ export default function App() {
                   pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
                 }
                 
-                const base64Data = btoa(String.fromCharCode(...new Uint8Array(pcmData.buffer)));
+                let binary = "";
+                const bytes = new Uint8Array(pcmData.buffer);
+                const len = bytes.byteLength;
+                const chunkSize = 0x8000;
+                for (let j = 0; j < len; j += chunkSize) {
+                  binary += String.fromCharCode.apply(null, bytes.subarray(j, j + chunkSize) as unknown as number[]);
+                }
+                const base64Data = btoa(binary);
                 session.sendRealtimeInput({
                   audio: { data: base64Data, mimeType: 'audio/pcm;rate=16000' }
                 });
