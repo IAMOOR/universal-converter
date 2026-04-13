@@ -31,6 +31,7 @@ import {
   Sun,
   Moon,
   Contrast
+,  LucideIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
@@ -45,7 +46,7 @@ interface Unit {
   description: string;
 }
 
-const CATEGORIES: Record<Category, { icon: any; units: Unit[] }> = {
+const CATEGORIES: Record<Category, { icon: LucideIcon; units: Unit[] }> = {
   Weight: {
     icon: Scale,
     units: [
