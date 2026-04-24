@@ -492,7 +492,7 @@ export default function App() {
       setVoiceStatus('Connecting...');
       
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
       
       // Setup playback
       let nextStartTime = 0;
@@ -557,7 +557,7 @@ export default function App() {
               };
 
               // Store cleanup
-              (window as any)._voiceCleanup = () => {
+              window._voiceCleanup = () => {
                 stream.getTracks().forEach(t => t.stop());
                 processor.disconnect();
                 source.disconnect();
@@ -598,8 +598,8 @@ export default function App() {
 
   useEffect(() => {
     return () => {
-      if ((window as any)._voiceCleanup) {
-        (window as any)._voiceCleanup();
+      if (window._voiceCleanup) {
+        window._voiceCleanup();
       }
     };
   }, []);
