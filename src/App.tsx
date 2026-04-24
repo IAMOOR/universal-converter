@@ -33,7 +33,6 @@ import {
   Contrast
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { GoogleGenAI, Modality } from "@google/genai";
 
 type Category = 'Weight' | 'Length' | 'Volume' | 'Temperature' | 'Currency';
 type Theme = 'light' | 'dark' | 'high-contrast';
@@ -491,7 +490,6 @@ export default function App() {
       setIsVoiceActive(true);
       setVoiceStatus('Connecting...');
       
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: SAMPLE_RATE });
       
       // Setup playback
@@ -521,73 +519,87 @@ export default function App() {
         nextStartTime = startTime + buffer.duration;
       };
 
-      const session = await ai.live.connect({
-        model: "gemini-3.1-flash-live-preview",
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
-          },
-          systemInstruction: "You are a helpful voice assistant for a unit converter app. Help users with conversions, math, and general questions. Keep responses concise and friendly. You can hear the user and respond with voice.",
-        },
-        callbacks: {
-          onopen: () => {
-            setVoiceStatus('Ready');
-            setIsListening(true);
-            
-            // Start recording
-            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-              const source = audioContext.createMediaStreamSource(stream);
-              const processor = audioContext.createScriptProcessor(CHUNK_SIZE, 1, 1);
-              
-              source.connect(processor);
-              processor.connect(audioContext.destination);
-              
-              processor.onaudioprocess = (e) => {
-                const inputData = e.inputBuffer.getChannelData(0);
-                const pcmData = new Int16Array(inputData.length);
-                for (let i = 0; i < inputData.length; i++) {
-                  pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
-                }
-                
-                const base64Data = btoa(String.fromCharCode(...new Uint8Array(pcmData.buffer)));
-                session.sendRealtimeInput({
-                  audio: { data: base64Data, mimeType: 'audio/pcm;rate=16000' }
-                });
-              };
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.hostname}:3001/ws`;
+      const ws = new WebSocket(wsUrl);
 
-              // Store cleanup
-              (window as any)._voiceCleanup = () => {
-                stream.getTracks().forEach(t => t.stop());
-                processor.disconnect();
-                source.disconnect();
-                audioContext.close();
-                session.close();
-              };
-            });
-          },
-          onmessage: (message) => {
-            const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-            if (base64Audio) {
-              playAudio(base64Audio);
+      ws.onopen = () => {
+        setVoiceStatus('Ready');
+        setIsListening(true);
+
+        // Send initial setup
+        ws.send(JSON.stringify({
+          setup: {
+            model: "models/gemini-3.1-flash-live-preview",
+            generationConfig: {
+              responseModalities: ["audio"],
+              speechConfig: {
+                voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
+              },
+            },
+            systemInstruction: {
+              parts: [{ text: "You are a helpful voice assistant for a unit converter app. Help users with conversions, math, and general questions. Keep responses concise and friendly. You can hear the user and respond with voice." }]
             }
-            if (message.serverContent?.interrupted) {
-              // Handle interruption if needed
-            }
-          },
-          onclose: () => {
-            setIsVoiceActive(false);
-            setIsListening(false);
-            setVoiceStatus('Idle');
-          },
-          onerror: (err) => {
-            console.error('Voice Error:', err);
-            setIsVoiceActive(false);
-            setIsListening(false);
-            setVoiceStatus('Error');
           }
+        }));
+
+        // Start recording
+        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+          const source = audioContext.createMediaStreamSource(stream);
+          const processor = audioContext.createScriptProcessor(CHUNK_SIZE, 1, 1);
+
+          source.connect(processor);
+          processor.connect(audioContext.destination);
+
+          processor.onaudioprocess = (e) => {
+            const inputData = e.inputBuffer.getChannelData(0);
+            const pcmData = new Int16Array(inputData.length);
+            for (let i = 0; i < inputData.length; i++) {
+              pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
+            }
+
+            const base64Data = btoa(String.fromCharCode(...new Uint8Array(pcmData.buffer)));
+            ws.send(JSON.stringify({
+              realtimeInput: {
+                mediaChunks: [{
+                  data: base64Data,
+                  mimeType: 'audio/pcm;rate=16000'
+                }]
+              }
+            }));
+          };
+
+          // Store cleanup
+          (window as any)._voiceCleanup = () => {
+            stream.getTracks().forEach(t => t.stop());
+            processor.disconnect();
+            source.disconnect();
+            audioContext.close();
+            ws.close();
+          };
+        });
+      };
+
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+        if (base64Audio) {
+          playAudio(base64Audio);
         }
-      });
+      };
+
+      ws.onclose = () => {
+        setIsVoiceActive(false);
+        setIsListening(false);
+        setVoiceStatus('Idle');
+      };
+
+      ws.onerror = (err) => {
+        console.error('Voice Error:', err);
+        setIsVoiceActive(false);
+        setIsListening(false);
+        setVoiceStatus('Error');
+      };
 
     } catch (error) {
       console.error('Failed to start voice:', error);
