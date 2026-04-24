@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Scale, 
   Ruler, 
@@ -161,6 +161,7 @@ function Tooltip({ text, theme }: { text: string; theme: Theme }) {
 }
 
 export default function App() {
+  const voiceCleanupRef = useRef<(() => void) | null>(null);
   const [category, setCategory] = useState<Category>('Weight');
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -484,6 +485,7 @@ export default function App() {
       setIsVoiceActive(false);
       setIsListening(false);
       setVoiceStatus('Idle');
+      voiceCleanupRef.current?.();
       return;
     }
 
@@ -557,12 +559,13 @@ export default function App() {
               };
 
               // Store cleanup
-              (window as any)._voiceCleanup = () => {
+              voiceCleanupRef.current = () => {
                 stream.getTracks().forEach(t => t.stop());
                 processor.disconnect();
                 source.disconnect();
                 audioContext.close();
                 session.close();
+                voiceCleanupRef.current = null;
               };
             });
           },
@@ -593,14 +596,13 @@ export default function App() {
       console.error('Failed to start voice:', error);
       setIsVoiceActive(false);
       setVoiceStatus('Failed');
+      voiceCleanupRef.current?.();
     }
   };
 
   useEffect(() => {
     return () => {
-      if ((window as any)._voiceCleanup) {
-        (window as any)._voiceCleanup();
-      }
+      voiceCleanupRef.current?.();
     };
   }, []);
 
