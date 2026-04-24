@@ -604,6 +604,10 @@ export default function App() {
     };
   }, []);
 
+  const currentCategoryUnits = CATEGORIES[category].units;
+  const fromUnitDetails = currentCategoryUnits.find(u => u.value === fromUnit);
+  const toUnitDetails = currentCategoryUnits.find(u => u.value === toUnit);
+
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-300 ${s.bg}`}>
       <motion.div 
@@ -705,7 +709,7 @@ export default function App() {
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>From</label>
-                    <Tooltip text={CATEGORIES[category].units.find(u => u.value === fromUnit)?.description || ''} theme={theme} />
+                    <Tooltip text={fromUnitDetails?.description || ''} theme={theme} />
                   </div>
                   <div className="relative group">
                     <input
@@ -739,7 +743,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === fromUnit)?.description}
+                      {fromUnitDetails?.description}
                     </p>
                   </div>
                   {converterError && (
@@ -764,7 +768,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>To</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === toUnit)?.description || ''} theme={theme} />
+                      <Tooltip text={toUnitDetails?.description || ''} theme={theme} />
                     </div>
                     {category === 'Currency' && (
                       <button 
@@ -800,7 +804,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === toUnit)?.description}
+                      {toUnitDetails?.description}
                     </p>
                   </div>
                 </div>
