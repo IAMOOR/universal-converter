@@ -272,14 +272,15 @@ export default function App() {
 
   const fetchRates = async () => {
     setLoadingRates(true);
+    setConverterError(null);
     try {
       const response = await fetch('https://open.er-api.com/v6/latest/USD');
       const data = await response.json();
       if (data && data.rates) {
         setExchangeRates(data.rates);
       }
-    } catch (error) {
-      console.error('Failed to fetch exchange rates:', error);
+    } catch {
+      setConverterError('Failed to fetch exchange rates');
     } finally {
       setLoadingRates(false);
     }
@@ -580,19 +581,17 @@ export default function App() {
             setIsListening(false);
             setVoiceStatus('Idle');
           },
-          onerror: (err) => {
-            console.error('Voice Error:', err);
+          onerror: () => {
             setIsVoiceActive(false);
             setIsListening(false);
-            setVoiceStatus('Error');
+            setVoiceStatus('Voice Error');
           }
         }
       });
 
-    } catch (error) {
-      console.error('Failed to start voice:', error);
+    } catch {
       setIsVoiceActive(false);
-      setVoiceStatus('Failed');
+      setVoiceStatus('Failed to start voice');
     }
   };
 
