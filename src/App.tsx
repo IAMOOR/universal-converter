@@ -24,7 +24,6 @@ import {
   Mic,
   MicOff,
   Volume2,
-  VolumeX,
   Loader2,
   History,
   Coins,
