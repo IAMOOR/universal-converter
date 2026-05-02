@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Scale, 
   Ruler, 
@@ -128,6 +128,8 @@ const CATEGORIES: Record<Category, { icon: any; units: Unit[] }> = {
   },
 };
 
+const CATEGORY_KEYS = Object.keys(CATEGORIES) as Category[];
+
 // Audio processing constants
 const SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 2048;
@@ -172,6 +174,16 @@ export default function App() {
   const [showCalculator, setShowCalculator] = useState(false);
   const [copied, setCopied] = useState(false);
   const [converterError, setConverterError] = useState<string | null>(null);
+
+  const activeFromUnit = useMemo(() =>
+    CATEGORIES[category].units.find(u => u.value === fromUnit),
+    [category, fromUnit]
+  );
+
+  const activeToUnit = useMemo(() =>
+    CATEGORIES[category].units.find(u => u.value === toUnit),
+    [category, toUnit]
+  );
 
   // Calculator state
   const [calcDisplay, setCalcDisplay] = useState('0');
@@ -328,16 +340,15 @@ export default function App() {
       return;
     }
 
-    const units = CATEGORIES[category].units;
-    const from = units.find((u) => u.value === fromUnit);
-    const to = units.find((u) => u.value === toUnit);
+    const from = activeFromUnit;
+    const to = activeToUnit;
 
     if (from && to && from.ratio && to.ratio) {
       const baseValue = val * from.ratio;
       const result = baseValue / to.ratio;
       setToValue(result.toFixed(6).replace(/\.?0+$/, ''));
     }
-  }, [category, fromUnit, toUnit, fromValue, exchangeRates]);
+  }, [activeFromUnit, activeToUnit, fromValue, exchangeRates, category, fromUnit, toUnit]);
 
   useEffect(() => {
     convert();
@@ -671,7 +682,7 @@ export default function App() {
 
         {/* Category Tabs */}
         <div className={`flex p-2 gap-1 transition-colors ${s.tabs}`}>
-          {(Object.keys(CATEGORIES) as Category[]).map((cat) => {
+          {CATEGORY_KEYS.map((cat) => {
             const Icon = CATEGORIES[cat].icon;
             const isActive = category === cat;
             return (
@@ -705,7 +716,7 @@ export default function App() {
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>From</label>
-                    <Tooltip text={CATEGORIES[category].units.find(u => u.value === fromUnit)?.description || ''} theme={theme} />
+                    <Tooltip text={activeFromUnit?.description || ''} theme={theme} />
                   </div>
                   <div className="relative group">
                     <input
@@ -739,7 +750,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === fromUnit)?.description}
+                      {activeFromUnit?.description}
                     </p>
                   </div>
                   {converterError && (
@@ -764,7 +775,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>To</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === toUnit)?.description || ''} theme={theme} />
+                      <Tooltip text={activeToUnit?.description || ''} theme={theme} />
                     </div>
                     {category === 'Currency' && (
                       <button 
@@ -800,7 +811,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === toUnit)?.description}
+                      {activeToUnit?.description}
                     </p>
                   </div>
                 </div>
