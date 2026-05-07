@@ -350,7 +350,7 @@ export default function App() {
     setToUnit(defaultUnits[defaultUnits.length > 1 ? 1 : 0].value);
   }, [category]);
 
-  const handleCopy = () => {
+  const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(toValue);
     setCopied(true);
     
@@ -365,14 +365,38 @@ export default function App() {
     }
     
     setTimeout(() => setCopied(false), 2000);
-  };
+  }, [toValue, category, fromValue, fromUnit, toUnit]);
 
-  const swapUnits = () => {
+  const swapUnits = useCallback(() => {
     const temp = fromUnit;
     setFromUnit(toUnit);
     setToUnit(temp);
     setFromValue(toValue);
-  };
+  }, [fromUnit, toUnit, toValue]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      if (e.altKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (!showCalculator) swapUnits();
+      }
+
+      if (e.altKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        if (!showCalculator && toValue) {
+          handleCopy();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showCalculator, swapUnits, handleCopy, toValue]);
 
   // Calculator Logic
   const inputDigit = (digit: string) => {
@@ -605,14 +629,14 @@ export default function App() {
   }, []);
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-300 ${s.bg}`}>
+    <div className={`min-h-[100dvh] flex items-center justify-center md:p-4 font-sans transition-colors duration-300 ${s.bg}`}>
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`w-full max-w-md rounded-3xl shadow-xl border transition-all duration-300 ${s.card}`}
+        className={`w-full min-h-[100dvh] md:min-h-fit md:max-w-md !rounded-none md:!rounded-3xl shadow-xl !border-0 md:!border flex flex-col transition-all duration-300 ${s.card}`}
       >
         {/* Header */}
-        <div className={`p-6 rounded-t-3xl transition-colors duration-300 ${s.header}`}>
+        <div className={`p-6 !rounded-t-none md:!rounded-t-3xl transition-colors duration-300 ${s.header}`}>
           <div className="flex justify-between items-center mb-2">
             <h1 className="text-xl font-semibold tracking-tight">Converter</h1>
             <div className="flex gap-2">
@@ -691,7 +715,7 @@ export default function App() {
           })}
         </div>
 
-        <div className="relative">
+        <div className="relative flex-1 flex flex-col">
           <AnimatePresence mode="wait">
             {!showCalculator ? (
               <motion.div
@@ -753,6 +777,7 @@ export default function App() {
                 <div className="flex justify-center -my-3 relative z-10">
                   <button 
                     onClick={swapUnits}
+                    title="Swap units (Alt + S)"
                     className={`p-3 rounded-full border shadow-sm transition-all active:scale-95 ${theme === 'high-contrast' ? 'bg-black border-white text-white hover:bg-white hover:text-black' : 'bg-white border-slate-200 text-slate-400 hover:text-blue-500 hover:border-blue-200'}`}
                   >
                     <ArrowRightLeft size={18} />
@@ -810,6 +835,7 @@ export default function App() {
                   <button
                     onClick={handleCopy}
                     disabled={!toValue}
+                    title="Copy result (Alt + C)"
                     className={`w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'high-contrast' ? 'bg-white text-black border-2 border-black font-black' : s.primaryBtn}`}
                   >
                     {copied ? (
@@ -820,7 +846,7 @@ export default function App() {
                     ) : (
                       <>
                         <Copy size={18} />
-                        <span>Copy Result</span>
+                        <span>Copy Result <span className="opacity-60 text-xs ml-1 font-normal">(Alt + C)</span></span>
                       </>
                     )}
                   </button>
@@ -1021,7 +1047,7 @@ export default function App() {
         </div>
 
         {/* Footer */}
-        <div className={`px-6 py-4 border-t text-center transition-colors ${theme === 'high-contrast' ? 'bg-black border-white' : 'bg-slate-50 border-slate-100'}`}>
+        <div className={`mt-auto px-6 py-4 border-t text-center !rounded-b-none md:!rounded-b-3xl transition-colors ${theme === 'high-contrast' ? 'bg-black border-white' : 'bg-slate-50 border-slate-100'}`}>
           <p className={`text-[10px] uppercase tracking-widest font-bold ${s.label}`}>
             Universal Metric Converter & Calculator
           </p>
