@@ -34,6 +34,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
+import { calculate } from './utils/calculate';
+
 
 type Category = 'Weight' | 'Length' | 'Volume' | 'Temperature' | 'Currency';
 type Theme = 'light' | 'dark' | 'high-contrast';
@@ -460,16 +462,6 @@ export default function App() {
 
     setCalcWaitingForOperand(true);
     setCalcOperator(nextOperator === '=' ? null : nextOperator);
-  };
-
-  const calculate = (prev: number, next: number, op: string) => {
-    switch (op) {
-      case '+': return prev + next;
-      case '-': return prev - next;
-      case '*': return prev * next;
-      case '/': return prev / next;
-      default: return next;
-    }
   };
 
   const handleUseInConverter = () => {
