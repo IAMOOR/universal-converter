@@ -270,23 +270,28 @@ export default function App() {
 
   const s = themeStyles[theme];
 
-  const fetchRates = async () => {
+  const fetchRates = async (signal?: AbortSignal) => {
     setLoadingRates(true);
     try {
-      const response = await fetch('https://open.er-api.com/v6/latest/USD');
+      const response = await fetch('https://open.er-api.com/v6/latest/USD', { signal });
       const data = await response.json();
       if (data && data.rates) {
         setExchangeRates(data.rates);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') return;
       console.error('Failed to fetch exchange rates:', error);
     } finally {
-      setLoadingRates(false);
+      if (!signal?.aborted) {
+        setLoadingRates(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchRates();
+    const controller = new AbortController();
+    fetchRates(controller.signal);
+    return () => controller.abort();
   }, []);
 
   const convert = useCallback(() => {
@@ -793,7 +798,7 @@ export default function App() {
                     </div>
                     {category === 'Currency' && (
                       <button 
-                        onClick={fetchRates}
+                        onClick={() => fetchRates()}
                         className="text-[10px] font-bold text-blue-500 uppercase tracking-widest hover:text-blue-600 transition-colors flex items-center gap-1"
                         disabled={loadingRates}
                       >
