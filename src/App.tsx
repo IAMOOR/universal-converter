@@ -523,14 +523,11 @@ export default function App() {
       const playAudio = (base64Data: string) => {
         const binary = atob(base64Data);
         const len = binary.length;
-        const bytes = new Int16Array(len / 2);
+        const float32Data = new Float32Array(len / 2);
         for (let i = 0; i < len; i += 2) {
-          bytes[i / 2] = (binary.charCodeAt(i + 1) << 8) | binary.charCodeAt(i);
-        }
-        
-        const float32Data = new Float32Array(bytes.length);
-        for (let i = 0; i < bytes.length; i++) {
-          float32Data[i] = bytes[i] / 32768;
+          const char0 = binary.charCodeAt(i);
+          const char1 = binary.charCodeAt(i + 1);
+          float32Data[i / 2] = (((char1 << 8) | char0) << 16 >> 16) / 32768;
         }
         
         const buffer = audioContext.createBuffer(1, float32Data.length, SAMPLE_RATE);
