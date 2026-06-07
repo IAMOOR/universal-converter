@@ -160,41 +160,7 @@ function Tooltip({ text, theme }: { text: string; theme: Theme }) {
   );
 }
 
-export default function App() {
-  const [category, setCategory] = useState<Category>('Weight');
-  const [isVoiceActive, setIsVoiceActive] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [voiceStatus, setVoiceStatus] = useState<string>('Idle');
-  const [fromUnit, setFromUnit] = useState(CATEGORIES['Weight'].units[0].value);
-  const [toUnit, setToUnit] = useState(CATEGORIES['Weight'].units[3].value);
-  const [fromValue, setFromValue] = useState<string>('1');
-  const [toValue, setToValue] = useState<string>('');
-  const [showCalculator, setShowCalculator] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [converterError, setConverterError] = useState<string | null>(null);
-
-  // Calculator state
-  const [calcDisplay, setCalcDisplay] = useState('0');
-  const [calcPrevValue, setCalcPrevValue] = useState<number | null>(null);
-  const [calcOperator, setCalcOperator] = useState<string | null>(null);
-  const [calcWaitingForOperand, setCalcWaitingForOperand] = useState(false);
-  const [calcHistory, setCalcHistory] = useState<{ expression: string; result: string }[]>([]);
-  const [calcError, setCalcError] = useState<string | null>(null);
-  const [theme, setTheme] = useState<Theme>('light');
-  const [showCalcCurrency, setShowCalcCurrency] = useState(false);
-  const [calcFromCurrency, setCalcFromCurrency] = useState('USD');
-  const [calcToCurrency, setCalcToCurrency] = useState('EUR');
-  const [currencyHistory, setCurrencyHistory] = useState<{
-    fromAmount: string;
-    fromUnit: string;
-    toAmount: string;
-    toUnit: string;
-    date: string;
-  }[]>([]);
-  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
-  const [loadingRates, setLoadingRates] = useState(false);
-
-  const themeStyles = {
+const themeStyles = {
     light: {
       bg: 'bg-slate-50',
       card: 'bg-white border-slate-100 shadow-slate-200/50',
@@ -267,6 +233,42 @@ export default function App() {
       calcHistorySub: 'text-yellow-400',
     }
   };
+
+export default function App() {
+  const [category, setCategory] = useState<Category>('Weight');
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState<string>('Idle');
+  const [fromUnit, setFromUnit] = useState(CATEGORIES['Weight'].units[0].value);
+  const [toUnit, setToUnit] = useState(CATEGORIES['Weight'].units[3].value);
+  const [fromValue, setFromValue] = useState<string>('1');
+  const [toValue, setToValue] = useState<string>('');
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [converterError, setConverterError] = useState<string | null>(null);
+
+  // Calculator state
+  const [calcDisplay, setCalcDisplay] = useState('0');
+  const [calcPrevValue, setCalcPrevValue] = useState<number | null>(null);
+  const [calcOperator, setCalcOperator] = useState<string | null>(null);
+  const [calcWaitingForOperand, setCalcWaitingForOperand] = useState(false);
+  const [calcHistory, setCalcHistory] = useState<{ expression: string; result: string }[]>([]);
+  const [calcError, setCalcError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<Theme>('light');
+  const [showCalcCurrency, setShowCalcCurrency] = useState(false);
+  const [calcFromCurrency, setCalcFromCurrency] = useState('USD');
+  const [calcToCurrency, setCalcToCurrency] = useState('EUR');
+  const [currencyHistory, setCurrencyHistory] = useState<{
+    fromAmount: string;
+    fromUnit: string;
+    toAmount: string;
+    toUnit: string;
+    date: string;
+  }[]>([]);
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [loadingRates, setLoadingRates] = useState(false);
+
+
 
   const s = themeStyles[theme];
 
