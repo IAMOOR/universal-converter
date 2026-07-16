@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
+import { convertTemperature } from "./utils/temperature";
 import {
   AreaChart,
   Area,
@@ -286,13 +287,7 @@ export default function App() {
 
   const getConvertedValue = useCallback((val: number, fromU: string, toU: string) => {
     if (category === 'Temperature') {
-      if (fromU === toU) {
-        return val;
-      } else if (fromU === 'C' && toU === 'F') {
-        return (val * 9) / 5 + 32;
-      } else {
-        return ((val - 32) * 5) / 9;
-      }
+      return convertTemperature(val, fromU, toU);
     }
 
     if (category === 'Currency') {
@@ -468,10 +463,8 @@ export default function App() {
     if (category === 'Temperature') {
       if (fromUnit === toUnit) {
         setToValue(val.toString());
-      } else if (fromUnit === 'C' && toUnit === 'F') {
-        setToValue(((val * 9) / 5 + 32).toFixed(4).replace(/\.?0+$/, ''));
       } else {
-        setToValue(((val - 32) * 5 / 9).toFixed(4).replace(/\.?0+$/, ''));
+        setToValue(convertTemperature(val, fromUnit, toUnit).toFixed(4).replace(/\.?0+$/, ''));
       }
       return;
     }
