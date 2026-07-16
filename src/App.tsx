@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { calculate } from './utils/calculator';
 import { 
   Scale, 
   Ruler, 
@@ -636,15 +637,7 @@ export default function App() {
     setCalcOperator(nextOperator === '=' ? null : nextOperator);
   };
 
-  const calculate = (prev: number, next: number, op: string) => {
-    switch (op) {
-      case '+': return prev + next;
-      case '-': return prev - next;
-      case '*': return prev * next;
-      case '/': return prev / next;
-      default: return next;
-    }
-  };
+
 
   const handleUseInConverter = () => {
     setFromValue(calcDisplay);
