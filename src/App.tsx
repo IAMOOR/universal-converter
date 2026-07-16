@@ -284,6 +284,10 @@ export default function App() {
   const [loadingRates, setLoadingRates] = useState(false);
   const [showChart, setShowChart] = useState(true);
 
+  const fromUnitObj = useMemo(() => CATEGORIES[category].units.find(u => u.value === fromUnit), [category, fromUnit]);
+  const toUnitObj = useMemo(() => CATEGORIES[category].units.find(u => u.value === toUnit), [category, toUnit]);
+
+
   const getConvertedValue = useCallback((val: number, fromU: string, toU: string) => {
     if (category === 'Temperature') {
       if (fromU === toU) {
@@ -1011,7 +1015,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>From</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === fromUnit)?.description || ''} theme={theme} />
+                      <Tooltip text={fromUnitObj?.description || ''} theme={theme} />
                     </div>
                     <button
                       type="button"
@@ -1061,7 +1065,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === fromUnit)?.description}
+                      {fromUnitObj?.description}
                     </p>
                   </div>
                   {converterError && (
@@ -1087,7 +1091,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>To</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === toUnit)?.description || ''} theme={theme} />
+                      <Tooltip text={toUnitObj?.description || ''} theme={theme} />
                     </div>
                     <div className="flex items-center gap-3">
                       <button
@@ -1140,7 +1144,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === toUnit)?.description}
+                      {toUnitObj?.description}
                     </p>
                   </div>
                 </div>
