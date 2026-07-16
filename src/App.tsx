@@ -218,6 +218,16 @@ function Tooltip({ text, theme }: { text: string; theme: Theme }) {
   );
 }
 
+export const calculate = (prev: number, next: number, op: string) => {
+    switch (op) {
+      case '+': return prev + next;
+      case '-': return prev - next;
+      case '*': return prev * next;
+      case '/': return prev / next;
+      default: return next;
+    }
+  };
+
 export default function App() {
   const [category, setCategory] = useState<Category>('Weight');
   const [activePreset, setActivePreset] = useState<string | null>(null);
@@ -636,15 +646,6 @@ export default function App() {
     setCalcOperator(nextOperator === '=' ? null : nextOperator);
   };
 
-  const calculate = (prev: number, next: number, op: string) => {
-    switch (op) {
-      case '+': return prev + next;
-      case '-': return prev - next;
-      case '*': return prev * next;
-      case '/': return prev / next;
-      default: return next;
-    }
-  };
 
   const handleUseInConverter = () => {
     setFromValue(calcDisplay);
