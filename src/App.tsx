@@ -689,7 +689,16 @@ export default function App() {
       setIsVoiceActive(true);
       setVoiceStatus('Connecting...');
       
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+      // In production/dev we use the local proxy to keep the API key secure
+      const aiUrl = window.location.protocol === 'https:'
+          ? `https://${window.location.host}`
+          : `http://${window.location.host}`;
+
+      const ai = new GoogleGenAI({
+          apiKey: 'proxy_key',
+          httpOptions: { baseUrl: aiUrl }
+      });
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: SAMPLE_RATE });
       
       // Setup playback
