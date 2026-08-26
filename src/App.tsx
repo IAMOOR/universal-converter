@@ -1,3 +1,4 @@
+import { calculate } from './utils/calculator';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -636,15 +637,6 @@ export default function App() {
     setCalcOperator(nextOperator === '=' ? null : nextOperator);
   };
 
-  const calculate = (prev: number, next: number, op: string) => {
-    switch (op) {
-      case '+': return prev + next;
-      case '-': return prev - next;
-      case '*': return prev * next;
-      case '/': return prev / next;
-      default: return next;
-    }
-  };
 
   const handleUseInConverter = () => {
     setFromValue(calcDisplay);
