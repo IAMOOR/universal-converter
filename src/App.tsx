@@ -516,11 +516,14 @@ export default function App() {
       ? CATEGORIES[category].units.filter(u => currentAllowedPreset!.units.includes(u.value))
       : CATEGORIES[category].units;
 
-    const allowedValues = allowedUnits.map(u => u.value);
+    const isFromAllowed = allowedUnits.some(u => u.value === fromUnit);
+    const isToAllowed = allowedUnits.some(u => u.value === toUnit);
 
-    if (!allowedValues.includes(fromUnit) || !allowedValues.includes(toUnit) || fromUnit === toUnit) {
-      setFromUnit(allowedValues[0]);
-      setToUnit(allowedValues[allowedValues.length > 1 ? 1 : 0]);
+    if (!isFromAllowed || !isToAllowed || fromUnit === toUnit) {
+      if (allowedUnits.length > 0) {
+        setFromUnit(allowedUnits[0].value);
+        setToUnit(allowedUnits[allowedUnits.length > 1 ? 1 : 0].value);
+      }
     }
   }, [category, activePreset]);
 
