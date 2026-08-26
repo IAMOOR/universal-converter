@@ -433,7 +433,7 @@ export default function App() {
   const fetchRates = async () => {
     setLoadingRates(true);
     try {
-      const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+      const response = await fetch(process.env.EXCHANGE_RATE_API_URL || 'https://api.exchangerate-api.com/v4/latest/USD');
       const data = await response.json();
       if (data && data.rates) {
         setExchangeRates(data.rates);
