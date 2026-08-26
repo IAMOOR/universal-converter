@@ -252,6 +252,13 @@ export default function App() {
     return (pinnedUnits[category] || []).includes(unitValue);
   }, [pinnedUnits, category]);
 
+  const currentUnitsMap = useMemo(() => {
+    return CATEGORIES[category].units.reduce((acc, unit) => {
+      acc[unit.value] = unit;
+      return acc;
+    }, {} as Record<string, Unit>);
+  }, [category]);
+
   const currentUnits = useMemo(() => {
     const allUnits = CATEGORIES[category].units;
     let filtered = allUnits;
@@ -303,16 +310,15 @@ export default function App() {
       return 0;
     }
 
-    const units = CATEGORIES[category].units;
-    const fromObj = units.find((u) => u.value === fromU);
-    const toObj = units.find((u) => u.value === toU);
+    const fromObj = currentUnitsMap[fromU];
+    const toObj = currentUnitsMap[toU];
 
     if (fromObj && toObj && fromObj.ratio && toObj.ratio) {
       const baseValue = val * fromObj.ratio;
       return baseValue / toObj.ratio;
     }
     return 0;
-  }, [category, exchangeRates]);
+  }, [category, exchangeRates, currentUnitsMap]);
 
   const chartData = useMemo(() => {
     let steps = [1, 5, 10, 25, 50, 100];
@@ -488,16 +494,15 @@ export default function App() {
       return;
     }
 
-    const units = CATEGORIES[category].units;
-    const from = units.find((u) => u.value === fromUnit);
-    const to = units.find((u) => u.value === toUnit);
+    const from = currentUnitsMap[fromUnit];
+    const to = currentUnitsMap[toUnit];
 
     if (from && to && from.ratio && to.ratio) {
       const baseValue = val * from.ratio;
       const result = baseValue / to.ratio;
       setToValue(result.toFixed(6).replace(/\.?0+$/, ''));
     }
-  }, [category, fromUnit, toUnit, fromValue, exchangeRates]);
+  }, [category, fromUnit, toUnit, fromValue, exchangeRates, currentUnitsMap]);
 
   useEffect(() => {
     convert();
@@ -957,7 +962,7 @@ export default function App() {
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {(pinnedUnits[category] || []).map((val) => {
-                        const unit = CATEGORIES[category].units.find(u => u.value === val);
+                        const unit = currentUnitsMap[val];
                         if (!unit) return null;
                         const isCurrentlyFrom = fromUnit === val;
                         const isCurrentlyTo = toUnit === val;
@@ -1011,7 +1016,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>From</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === fromUnit)?.description || ''} theme={theme} />
+                      <Tooltip text={currentUnitsMap[fromUnit]?.description || ''} theme={theme} />
                     </div>
                     <button
                       type="button"
@@ -1061,7 +1066,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === fromUnit)?.description}
+                      {currentUnitsMap[fromUnit]?.description}
                     </p>
                   </div>
                   {converterError && (
@@ -1087,7 +1092,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>To</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === toUnit)?.description || ''} theme={theme} />
+                      <Tooltip text={currentUnitsMap[toUnit]?.description || ''} theme={theme} />
                     </div>
                     <div className="flex items-center gap-3">
                       <button
@@ -1140,7 +1145,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === toUnit)?.description}
+                      {currentUnitsMap[toUnit]?.description}
                     </p>
                   </div>
                 </div>
