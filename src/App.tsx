@@ -248,9 +248,13 @@ export default function App() {
     });
   }, [category]);
 
-  const isPinned = useCallback((unitValue: string) => {
-    return (pinnedUnits[category] || []).includes(unitValue);
+  const pinnedUnitsSet = useMemo(() => {
+    return new Set(pinnedUnits[category] || []);
   }, [pinnedUnits, category]);
+
+  const isPinned = useCallback((unitValue: string) => {
+    return pinnedUnitsSet.has(unitValue);
+  }, [pinnedUnitsSet]);
 
   const currentUnits = useMemo(() => {
     const allUnits = CATEGORIES[category].units;
@@ -262,13 +266,12 @@ export default function App() {
       }
     }
 
-    const pinned = pinnedUnits[category] || [];
-    if (pinned.length === 0) return filtered;
+    if (pinnedUnitsSet.size === 0) return filtered;
 
-    const pinnedList = filtered.filter(u => pinned.includes(u.value));
-    const unpinnedList = filtered.filter(u => !pinned.includes(u.value));
+    const pinnedList = filtered.filter(u => pinnedUnitsSet.has(u.value));
+    const unpinnedList = filtered.filter(u => !pinnedUnitsSet.has(u.value));
     return [...pinnedList, ...unpinnedList];
-  }, [category, activePreset, pinnedUnits]);
+  }, [category, activePreset, pinnedUnitsSet]);
 
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [isListening, setIsListening] = useState(false);
