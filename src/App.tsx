@@ -24,8 +24,6 @@ import {
   Info,
   Mic,
   MicOff,
-  Volume2,
-  VolumeX,
   Loader2,
   History,
   Coins,
@@ -33,7 +31,6 @@ import {
   Moon,
   Contrast,
   Star,
-  TrendingUp,
   LineChart as LucideLineChart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
