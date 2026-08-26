@@ -271,7 +271,6 @@ export default function App() {
   }, [category, activePreset, pinnedUnits]);
 
   const [isVoiceActive, setIsVoiceActive] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<string>('Idle');
   const [fromUnit, setFromUnit] = useState(CATEGORIES['Weight'].units[0].value);
   const [toUnit, setToUnit] = useState(CATEGORIES['Weight'].units[3].value);
@@ -680,7 +679,7 @@ export default function App() {
   const toggleVoice = async () => {
     if (isVoiceActive) {
       setIsVoiceActive(false);
-      setIsListening(false);
+
       setVoiceStatus('Idle');
       return;
     }
@@ -731,7 +730,7 @@ export default function App() {
         callbacks: {
           onopen: () => {
             setVoiceStatus('Ready');
-            setIsListening(true);
+
             
             // Start recording
             navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
@@ -775,13 +774,13 @@ export default function App() {
           },
           onclose: () => {
             setIsVoiceActive(false);
-            setIsListening(false);
+
             setVoiceStatus('Idle');
           },
           onerror: (err) => {
             console.error('Voice Error:', err);
             setIsVoiceActive(false);
-            setIsListening(false);
+
             setVoiceStatus('Error');
           }
         }
