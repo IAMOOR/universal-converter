@@ -1,5 +1,5 @@
 {
   "name": "Universal Metric Converter & Calculator",
-  "description": "A professional, minimalist unit converter and basic math calculator with real-time results and voice assistant.",
-  "requestFramePermissions": ["microphone"]
+  "description": "A professional, minimalist unit converter and basic math calculator with real-time results, unit presets, and tactile feedback.",
+  "requestFramePermissions": []
 }

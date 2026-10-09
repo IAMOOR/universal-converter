@@ -22,10 +22,6 @@ import {
   Equal,
   Delete,
   Info,
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
   Loader2,
   History,
   Coins,
@@ -34,10 +30,12 @@ import {
   Contrast,
   Star,
   TrendingUp,
-  LineChart as LucideLineChart
+  LineChart as LucideLineChart,
+  Vibrate,
+  VibrateOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { GoogleGenAI, Modality } from "@google/genai";
+import { triggerHaptic, isVibrationSupported } from './utils/vibration';
 import {
   AreaChart,
   Area,
@@ -186,10 +184,6 @@ const PRESETS = [
   }
 ];
 
-// Audio processing constants
-const SAMPLE_RATE = 16000;
-const CHUNK_SIZE = 2048;
-
 function Tooltip({ text, theme }: { text: string; theme: Theme }) {
   const [isOpen, setIsOpen] = useState(false);
   const isHighContrast = theme === 'high-contrast';
@@ -269,10 +263,29 @@ export default function App() {
     const unpinnedList = filtered.filter(u => !pinned.includes(u.value));
     return [...pinnedList, ...unpinnedList];
   }, [category, activePreset, pinnedUnits]);
+  const [hapticsEnabled, setHapticsEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('converter_haptics_enabled');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
 
-  const [isVoiceActive, setIsVoiceActive] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [voiceStatus, setVoiceStatus] = useState<string>('Idle');
+  const toggleHaptics = useCallback(() => {
+    setHapticsEnabled(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('converter_haptics_enabled', String(next));
+      } catch (err) {
+        console.error('Failed to save haptics setting', err);
+      }
+      if (next) {
+        triggerHaptic('success', true);
+      }
+      return next;
+    });
+  }, []);
   const [fromUnit, setFromUnit] = useState(CATEGORIES['Weight'].units[0].value);
   const [toUnit, setToUnit] = useState(CATEGORIES['Weight'].units[3].value);
   const [fromValue, setFromValue] = useState<string>('1');
@@ -525,6 +538,7 @@ export default function App() {
   }, [category, activePreset]);
 
   const handleCopy = useCallback(() => {
+    triggerHaptic('success', hapticsEnabled);
     navigator.clipboard.writeText(toValue);
     setCopied(true);
     
@@ -539,14 +553,15 @@ export default function App() {
     }
     
     setTimeout(() => setCopied(false), 2000);
-  }, [toValue, category, fromValue, fromUnit, toUnit]);
+  }, [toValue, category, fromValue, fromUnit, toUnit, hapticsEnabled]);
 
   const swapUnits = useCallback(() => {
+    triggerHaptic('swap', hapticsEnabled);
     const temp = fromUnit;
     setFromUnit(toUnit);
     setToUnit(temp);
     setFromValue(toValue);
-  }, [fromUnit, toUnit, toValue]);
+  }, [fromUnit, toUnit, toValue, hapticsEnabled]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -574,6 +589,7 @@ export default function App() {
 
   // Calculator Logic
   const inputDigit = (digit: string) => {
+    triggerHaptic('tick', hapticsEnabled);
     setCalcError(null);
     if (calcWaitingForOperand) {
       setCalcDisplay(digit);
@@ -584,6 +600,7 @@ export default function App() {
   };
 
   const inputDot = () => {
+    triggerHaptic('tick', hapticsEnabled);
     setCalcError(null);
     if (calcWaitingForOperand) {
       setCalcDisplay('0.');
@@ -596,6 +613,7 @@ export default function App() {
   };
 
   const clearCalc = () => {
+    triggerHaptic('clear', hapticsEnabled);
     setCalcDisplay('0');
     setCalcPrevValue(null);
     setCalcOperator(null);
@@ -607,11 +625,13 @@ export default function App() {
     const inputValue = parseFloat(calcDisplay);
 
     if (calcPrevValue === null) {
+      triggerHaptic(nextOperator === '=' ? 'calculate' : 'tick', hapticsEnabled);
       setCalcPrevValue(inputValue);
     } else if (calcOperator) {
       const currentValue = calcPrevValue || 0;
       
       if (calcOperator === '/' && inputValue === 0) {
+        triggerHaptic('error', hapticsEnabled);
         setCalcError('Cannot divide by zero');
         setCalcPrevValue(null);
         setCalcOperator(null);
@@ -622,10 +642,13 @@ export default function App() {
       const newValue = calculate(currentValue, inputValue, calcOperator);
       
       if (nextOperator === '=') {
+        triggerHaptic('calculate', hapticsEnabled);
         setCalcHistory(prev => [{
           expression: `${currentValue} ${calcOperator} ${inputValue}`,
           result: String(newValue)
         }, ...prev].slice(0, 10));
+      } else {
+        triggerHaptic('tick', hapticsEnabled);
       }
       
       setCalcPrevValue(newValue);
@@ -647,6 +670,7 @@ export default function App() {
   };
 
   const handleUseInConverter = () => {
+    triggerHaptic('success', hapticsEnabled);
     setFromValue(calcDisplay);
     setShowCalculator(false);
   };
@@ -654,11 +678,13 @@ export default function App() {
   const handleCalcCurrencyConvert = () => {
     const val = parseFloat(calcDisplay);
     if (isNaN(val)) {
+      triggerHaptic('error', hapticsEnabled);
       setCalcError('Invalid number');
       return;
     }
 
     if (exchangeRates[calcFromCurrency] && exchangeRates[calcToCurrency]) {
+      triggerHaptic('calculate', hapticsEnabled);
       const valInUsd = val / exchangeRates[calcFromCurrency];
       const result = valInUsd * exchangeRates[calcToCurrency];
       const formattedResult = result.toFixed(2);
@@ -672,135 +698,17 @@ export default function App() {
       setCalcWaitingForOperand(true);
       setShowCalcCurrency(false);
     } else {
+      triggerHaptic('error', hapticsEnabled);
       setCalcError('Rates not loaded');
     }
   };
 
-  // Voice Assistant Logic
-  const toggleVoice = async () => {
-    if (isVoiceActive) {
-      setIsVoiceActive(false);
-      setIsListening(false);
-      setVoiceStatus('Idle');
-      return;
-    }
-
-    try {
-      setIsVoiceActive(true);
-      setVoiceStatus('Connecting...');
-      
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: SAMPLE_RATE });
-      
-      // Setup playback
-      let nextStartTime = 0;
-      const playAudio = (base64Data: string) => {
-        const binary = atob(base64Data);
-        const len = binary.length;
-        const bytes = new Int16Array(len / 2);
-        for (let i = 0; i < len; i += 2) {
-          bytes[i / 2] = (binary.charCodeAt(i + 1) << 8) | binary.charCodeAt(i);
-        }
-        
-        const float32Data = new Float32Array(bytes.length);
-        for (let i = 0; i < bytes.length; i++) {
-          float32Data[i] = bytes[i] / 32768;
-        }
-        
-        const buffer = audioContext.createBuffer(1, float32Data.length, SAMPLE_RATE);
-        buffer.copyToChannel(float32Data, 0);
-        
-        const source = audioContext.createBufferSource();
-        source.buffer = buffer;
-        source.connect(audioContext.destination);
-        
-        const startTime = Math.max(audioContext.currentTime, nextStartTime);
-        source.start(startTime);
-        nextStartTime = startTime + buffer.duration;
-      };
-
-      const session = await ai.live.connect({
-        model: "gemini-3.1-flash-live-preview",
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
-          },
-          systemInstruction: "You are a helpful voice assistant for a unit converter app. Help users with conversions, math, and general questions. Keep responses concise and friendly. You can hear the user and respond with voice.",
-        },
-        callbacks: {
-          onopen: () => {
-            setVoiceStatus('Ready');
-            setIsListening(true);
-            
-            // Start recording
-            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-              const source = audioContext.createMediaStreamSource(stream);
-              const processor = audioContext.createScriptProcessor(CHUNK_SIZE, 1, 1);
-              
-              source.connect(processor);
-              processor.connect(audioContext.destination);
-              
-              processor.onaudioprocess = (e) => {
-                const inputData = e.inputBuffer.getChannelData(0);
-                const pcmData = new Int16Array(inputData.length);
-                for (let i = 0; i < inputData.length; i++) {
-                  pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
-                }
-                
-                const base64Data = btoa(String.fromCharCode(...new Uint8Array(pcmData.buffer)));
-                session.sendRealtimeInput({
-                  audio: { data: base64Data, mimeType: 'audio/pcm;rate=16000' }
-                });
-              };
-
-              // Store cleanup
-              (window as any)._voiceCleanup = () => {
-                stream.getTracks().forEach(t => t.stop());
-                processor.disconnect();
-                source.disconnect();
-                audioContext.close();
-                session.close();
-              };
-            });
-          },
-          onmessage: (message) => {
-            const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-            if (base64Audio) {
-              playAudio(base64Audio);
-            }
-            if (message.serverContent?.interrupted) {
-              // Handle interruption if needed
-            }
-          },
-          onclose: () => {
-            setIsVoiceActive(false);
-            setIsListening(false);
-            setVoiceStatus('Idle');
-          },
-          onerror: (err) => {
-            console.error('Voice Error:', err);
-            setIsVoiceActive(false);
-            setIsListening(false);
-            setVoiceStatus('Error');
-          }
-        }
-      });
-
-    } catch (error) {
-      console.error('Failed to start voice:', error);
-      setIsVoiceActive(false);
-      setVoiceStatus('Failed');
-    }
+  const swapCalcCurrencies = () => {
+    triggerHaptic('swap', hapticsEnabled);
+    const temp = calcFromCurrency;
+    setCalcFromCurrency(calcToCurrency);
+    setCalcToCurrency(temp);
   };
-
-  useEffect(() => {
-    return () => {
-      if ((window as any)._voiceCleanup) {
-        (window as any)._voiceCleanup();
-      }
-    };
-  }, []);
 
   return (
     <div className={`min-h-[100dvh] flex items-center justify-center md:p-4 font-sans transition-colors duration-300 ${s.bg}`}>
@@ -838,11 +746,16 @@ export default function App() {
                 </button>
               </div>
               <button 
-                onClick={toggleVoice}
-                className={`p-2 rounded-xl transition-all ${isVoiceActive ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
-                title="Voice Assistant"
+                onClick={toggleHaptics}
+                className={`p-2 rounded-xl transition-all touch-manipulation active:scale-95 cursor-pointer ${
+                  hapticsEnabled 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+                title={hapticsEnabled ? "Tactile vibration feedback enabled (click to mute)" : "Tactile vibration feedback disabled (click to enable)"}
+                aria-label={hapticsEnabled ? "Disable tactile feedback" : "Enable tactile feedback"}
               >
-                {isVoiceActive ? <Mic size={20} /> : <MicOff size={20} />}
+                {hapticsEnabled ? <Vibrate size={20} /> : <VibrateOff size={20} />}
               </button>
               <button 
                 onClick={() => setShowCalculator(!showCalculator)}
@@ -855,13 +768,10 @@ export default function App() {
           </div>
           <div className="flex justify-between items-center">
             <p className="text-slate-400 text-sm">Universal Metric & Math Tool</p>
-            {isVoiceActive && (
-              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-blue-400">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                </span>
-                {voiceStatus}
+            {isVibrationSupported() && (
+              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <span className={`inline-block h-1.5 w-1.5 rounded-full ${hapticsEnabled ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                <span>{hapticsEnabled ? 'Haptics On' : 'Haptics Muted'}</span>
               </div>
             )}
           </div>
@@ -875,7 +785,10 @@ export default function App() {
             return (
               <button
                 key={cat}
-                onClick={() => setCategory(cat)}
+                onClick={() => {
+                  triggerHaptic('tick', hapticsEnabled);
+                  setCategory(cat);
+                }}
                 className={`flex-1 flex flex-col items-center py-3 px-1 rounded-2xl transition-all duration-200 ${
                   isActive 
                     ? s.tabActive 
@@ -924,6 +837,7 @@ export default function App() {
                         <button
                           key={p.id}
                           onClick={() => {
+                            triggerHaptic('tick', hapticsEnabled);
                             setActivePreset(p.id);
                             setCategory(p.category);
                             setFromUnit(p.defaultFrom);
@@ -1190,6 +1104,7 @@ export default function App() {
                           </div>
                           <button 
                             onClick={() => {
+                              triggerHaptic('swap', hapticsEnabled);
                               setFromValue(item.fromAmount);
                               setFromUnit(item.fromUnit);
                               setToUnit(item.toUnit);
@@ -1357,7 +1272,10 @@ export default function App() {
                               <button
                                 key={index}
                                 type="button"
-                                onClick={() => setFromValue(String(item.inputValue))}
+                                onClick={() => {
+                                  triggerHaptic('tick', hapticsEnabled);
+                                  setFromValue(String(item.inputValue));
+                                }}
                                 className={`p-2.5 rounded-xl text-center border transition-all active:scale-95 cursor-pointer flex flex-col justify-center items-center ${
                                   theme === 'high-contrast'
                                     ? 'bg-black border-white text-white hover:bg-white hover:text-black border-2'
@@ -1425,8 +1343,8 @@ export default function App() {
                           <span className={`text-[10px] font-bold uppercase tracking-widest ${s.label}`}>Currency Converter</span>
                           <button onClick={() => setShowCalcCurrency(false)} className="text-slate-400 hover:text-red-500"><X size={14} /></button>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <div className="flex-1 space-y-1">
                             <label className={`text-[9px] font-bold uppercase tracking-widest ml-1 ${s.label}`}>From</label>
                             <select
                               value={calcFromCurrency}
@@ -1438,7 +1356,22 @@ export default function App() {
                               ))}
                             </select>
                           </div>
-                          <div className="space-y-1">
+                          <div className="pt-4 shrink-0">
+                            <button
+                              type="button"
+                              onClick={swapCalcCurrencies}
+                              title="Swap currencies"
+                              aria-label="Swap currencies"
+                              className={`p-2 rounded-xl border transition-all active:scale-95 cursor-pointer ${
+                                theme === 'high-contrast'
+                                  ? 'bg-black text-white border-white'
+                                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 hover:text-blue-500'
+                              }`}
+                            >
+                              <ArrowRightLeft size={14} />
+                            </button>
+                          </div>
+                          <div className="flex-1 space-y-1">
                             <label className={`text-[9px] font-bold uppercase tracking-widest ml-1 ${s.label}`}>To</label>
                             <select
                               value={calcToCurrency}
@@ -1481,6 +1414,7 @@ export default function App() {
                         <button
                           key={idx}
                           onClick={() => {
+                            triggerHaptic('tick', hapticsEnabled);
                             setCalcDisplay(item.result);
                             setCalcWaitingForOperand(true);
                           }}
@@ -1505,7 +1439,10 @@ export default function App() {
 
                 <div className="grid grid-cols-4 gap-2">
                   <button onClick={clearCalc} className={`col-span-2 py-4 rounded-xl font-bold transition-all active:scale-95 ${theme === 'high-contrast' ? 'bg-black border-2 border-white text-white hover:bg-white hover:text-black' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}>AC</button>
-                  <button onClick={() => setCalcDisplay(calcDisplay.slice(0, -1) || '0')} className={`py-4 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center ${s.calcBtn}`}><Delete size={18} /></button>
+                  <button onClick={() => {
+                    triggerHaptic('clear', hapticsEnabled);
+                    setCalcDisplay(calcDisplay.slice(0, -1) || '0');
+                  }} className={`py-4 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center ${s.calcBtn}`}><Delete size={18} /></button>
                   <button onClick={() => performOperation('/')} className={`py-4 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center ${calcOperator === '/' ? 'ring-2 ring-blue-400' : ''} ${s.calcBtnOp}`}><Divide size={18} /></button>
                   
                   {[7, 8, 9].map(n => (
