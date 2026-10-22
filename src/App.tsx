@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   Scale, 
   Ruler, 
@@ -563,12 +563,19 @@ export default function App() {
     setFromValue(toValue);
   }, [fromUnit, toUnit, toValue, hapticsEnabled]);
 
+  const keydownStateRef = useRef({ showCalculator, swapUnits, handleCopy, toValue });
+  useEffect(() => {
+    keydownStateRef.current = { showCalculator, swapUnits, handleCopy, toValue };
+  }, [showCalculator, swapUnits, handleCopy, toValue]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
       if (activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA') {
         return;
       }
+
+      const { showCalculator, swapUnits, handleCopy, toValue } = keydownStateRef.current;
 
       if (e.altKey && e.key.toLowerCase() === 's') {
         e.preventDefault();
@@ -585,7 +592,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showCalculator, swapUnits, handleCopy, toValue]);
+  }, []);
 
   // Calculator Logic
   const inputDigit = (digit: string) => {
