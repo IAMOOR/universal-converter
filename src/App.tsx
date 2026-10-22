@@ -154,6 +154,13 @@ const CATEGORIES: Record<Category, { icon: any; units: Unit[] }> = {
   },
 };
 
+// Pre-compute maps for O(1) lookups
+const UNIT_MAPS = Object.entries(CATEGORIES).reduce((acc, [cat, data]) => {
+  acc[cat] = new Map(data.units.map(u => [u.value, u]));
+  return acc;
+}, {} as Record<string, Map<string, Unit>>);
+
+
 const PRESETS = [
   {
     id: 'cooking',
@@ -316,9 +323,9 @@ export default function App() {
       return 0;
     }
 
-    const units = CATEGORIES[category].units;
-    const fromObj = units.find((u) => u.value === fromU);
-    const toObj = units.find((u) => u.value === toU);
+    const unitMap = UNIT_MAPS[category];
+    const fromObj = unitMap?.get(fromU);
+    const toObj = unitMap?.get(toU);
 
     if (fromObj && toObj && fromObj.ratio && toObj.ratio) {
       const baseValue = val * fromObj.ratio;
