@@ -242,9 +242,13 @@ export default function App() {
     });
   }, [category]);
 
-  const isPinned = useCallback((unitValue: string) => {
-    return (pinnedUnits[category] || []).includes(unitValue);
+  const pinnedSet = useMemo(() => {
+    return new Set(pinnedUnits[category] || []);
   }, [pinnedUnits, category]);
+
+  const isPinned = useCallback((unitValue: string) => {
+    return pinnedSet.has(unitValue);
+  }, [pinnedSet]);
 
   const currentUnits = useMemo(() => {
     const allUnits = CATEGORIES[category].units;
