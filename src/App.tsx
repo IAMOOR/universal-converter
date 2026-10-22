@@ -297,6 +297,15 @@ export default function App() {
   const [loadingRates, setLoadingRates] = useState(false);
   const [showChart, setShowChart] = useState(true);
 
+  const unitsMap = useMemo(() => {
+    const map = new Map();
+    CATEGORIES[category].units.forEach(u => map.set(u.value, u));
+    return map;
+  }, [category]);
+
+  const fromUnitObj = useMemo(() => unitsMap.get(fromUnit), [unitsMap, fromUnit]);
+  const toUnitObj = useMemo(() => unitsMap.get(toUnit), [unitsMap, toUnit]);
+
   const getConvertedValue = useCallback((val: number, fromU: string, toU: string) => {
     if (category === 'Temperature') {
       if (fromU === toU) {
@@ -317,15 +326,15 @@ export default function App() {
     }
 
     const units = CATEGORIES[category].units;
-    const fromObj = units.find((u) => u.value === fromU);
-    const toObj = units.find((u) => u.value === toU);
+    const fromObj = fromU === fromUnit ? fromUnitObj : unitsMap.get(fromU);
+    const toObj = toU === toUnit ? toUnitObj : unitsMap.get(toU);
 
     if (fromObj && toObj && fromObj.ratio && toObj.ratio) {
       const baseValue = val * fromObj.ratio;
       return baseValue / toObj.ratio;
     }
     return 0;
-  }, [category, exchangeRates]);
+  }, [category, exchangeRates, fromUnit, toUnit, fromUnitObj, toUnitObj, unitsMap]);
 
   const chartData = useMemo(() => {
     let steps = [1, 5, 10, 25, 50, 100];
@@ -871,7 +880,7 @@ export default function App() {
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {(pinnedUnits[category] || []).map((val) => {
-                        const unit = CATEGORIES[category].units.find(u => u.value === val);
+                        const unit = unitsMap.get(val);
                         if (!unit) return null;
                         const isCurrentlyFrom = fromUnit === val;
                         const isCurrentlyTo = toUnit === val;
@@ -925,7 +934,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>From</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === fromUnit)?.description || ''} theme={theme} />
+                      <Tooltip text={fromUnitObj?.description || ''} theme={theme} />
                     </div>
                     <button
                       type="button"
@@ -975,7 +984,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === fromUnit)?.description}
+                      {fromUnitObj?.description}
                     </p>
                   </div>
                   {converterError && (
@@ -1001,7 +1010,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>To</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === toUnit)?.description || ''} theme={theme} />
+                      <Tooltip text={toUnitObj?.description || ''} theme={theme} />
                     </div>
                     <div className="flex items-center gap-3">
                       <button
@@ -1054,7 +1063,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === toUnit)?.description}
+                      {toUnitObj?.description}
                     </p>
                   </div>
                 </div>
