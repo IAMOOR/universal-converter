@@ -290,6 +290,13 @@ export default function App() {
   const [toUnit, setToUnit] = useState(CATEGORIES['Weight'].units[3].value);
   const [fromValue, setFromValue] = useState<string>('1');
   const [toValue, setToValue] = useState<string>('');
+
+  const categoryUnits = useMemo(() => {
+    const map = new Map<string, Unit>();
+    CATEGORIES[category].units.forEach(u => map.set(u.value, u));
+    return map;
+  }, [category]);
+
   const [showCalculator, setShowCalculator] = useState(false);
   const [copied, setCopied] = useState(false);
   const [converterError, setConverterError] = useState<string | null>(null);
@@ -871,7 +878,7 @@ export default function App() {
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {(pinnedUnits[category] || []).map((val) => {
-                        const unit = CATEGORIES[category].units.find(u => u.value === val);
+                        const unit = categoryUnits.get(val);
                         if (!unit) return null;
                         const isCurrentlyFrom = fromUnit === val;
                         const isCurrentlyTo = toUnit === val;
@@ -925,7 +932,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>From</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === fromUnit)?.description || ''} theme={theme} />
+                      <Tooltip text={categoryUnits.get(fromUnit)?.description || ''} theme={theme} />
                     </div>
                     <button
                       type="button"
@@ -975,7 +982,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === fromUnit)?.description}
+                      {categoryUnits.get(fromUnit)?.description}
                     </p>
                   </div>
                   {converterError && (
@@ -1001,7 +1008,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>To</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === toUnit)?.description || ''} theme={theme} />
+                      <Tooltip text={categoryUnits.get(toUnit)?.description || ''} theme={theme} />
                     </div>
                     <div className="flex items-center gap-3">
                       <button
@@ -1054,7 +1061,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === toUnit)?.description}
+                      {categoryUnits.get(toUnit)?.description}
                     </p>
                   </div>
                 </div>
