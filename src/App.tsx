@@ -23,8 +23,6 @@ import {
   Info,
   Mic,
   MicOff,
-  Volume2,
-  VolumeX,
   Loader2,
   History,
   Coins,
