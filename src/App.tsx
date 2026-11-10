@@ -128,6 +128,15 @@ const CATEGORIES: Record<Category, { icon: any; units: Unit[] }> = {
   },
 };
 
+const UNIT_MAPS: Record<Category, Record<string, Unit>> = Object.keys(CATEGORIES).reduce((acc, cat) => {
+  const category = cat as Category;
+  acc[category] = CATEGORIES[category].units.reduce((uAcc, unit) => {
+    uAcc[unit.value] = unit;
+    return uAcc;
+  }, {} as Record<string, Unit>);
+  return acc;
+}, {} as Record<Category, Record<string, Unit>>);
+
 // Audio processing constants
 const SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 2048;
@@ -328,9 +337,8 @@ export default function App() {
       return;
     }
 
-    const units = CATEGORIES[category].units;
-    const from = units.find((u) => u.value === fromUnit);
-    const to = units.find((u) => u.value === toUnit);
+    const from = UNIT_MAPS[category][fromUnit];
+    const to = UNIT_MAPS[category][toUnit];
 
     if (from && to && from.ratio && to.ratio) {
       const baseValue = val * from.ratio;
@@ -705,7 +713,7 @@ export default function App() {
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>From</label>
-                    <Tooltip text={CATEGORIES[category].units.find(u => u.value === fromUnit)?.description || ''} theme={theme} />
+                    <Tooltip text={UNIT_MAPS[category][fromUnit]?.description || ''} theme={theme} />
                   </div>
                   <div className="relative group">
                     <input
@@ -739,7 +747,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === fromUnit)?.description}
+                      {UNIT_MAPS[category][fromUnit]?.description}
                     </p>
                   </div>
                   {converterError && (
@@ -764,7 +772,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <label className={`text-xs font-bold uppercase tracking-widest ml-1 ${s.label}`}>To</label>
-                      <Tooltip text={CATEGORIES[category].units.find(u => u.value === toUnit)?.description || ''} theme={theme} />
+                      <Tooltip text={UNIT_MAPS[category][toUnit]?.description || ''} theme={theme} />
                     </div>
                     {category === 'Currency' && (
                       <button 
@@ -800,7 +808,7 @@ export default function App() {
                   <div className="px-1 flex items-start gap-1.5 min-h-[2rem]">
                     <Info size={10} className={`mt-1 shrink-0 ${s.label}`} />
                     <p className={`text-[11px] leading-relaxed italic ${s.desc}`}>
-                      {CATEGORIES[category].units.find(u => u.value === toUnit)?.description}
+                      {UNIT_MAPS[category][toUnit]?.description}
                     </p>
                   </div>
                 </div>
