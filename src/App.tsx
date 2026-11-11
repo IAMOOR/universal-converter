@@ -29,7 +29,6 @@ import {
   Moon,
   Contrast,
   Star,
-  TrendingUp,
   LineChart as LucideLineChart,
   Vibrate,
   VibrateOff
