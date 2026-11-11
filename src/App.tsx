@@ -337,8 +337,39 @@ export default function App() {
       steps = [1, 8, 64, 512, 1024, 2048, 4096];
     }
 
+    let convertStep: (val: number) => number;
+    if (category === 'Temperature') {
+      if (fromUnit === toUnit) {
+        convertStep = (val) => val;
+      } else if (fromUnit === 'C' && toUnit === 'F') {
+        convertStep = (val) => (val * 9) / 5 + 32;
+      } else {
+        convertStep = (val) => ((val - 32) * 5) / 9;
+      }
+    } else if (category === 'Currency') {
+      const fromRate = exchangeRates[fromUnit];
+      const toRate = exchangeRates[toUnit];
+      if (fromRate && toRate) {
+        const rateFactor = toRate / fromRate;
+        convertStep = (val) => val * rateFactor;
+      } else {
+        convertStep = () => 0;
+      }
+    } else {
+      const units = CATEGORIES[category].units;
+      const fromObj = units.find((u) => u.value === fromUnit);
+      const toObj = units.find((u) => u.value === toUnit);
+
+      if (fromObj?.ratio && toObj?.ratio) {
+        const factor = fromObj.ratio / toObj.ratio;
+        convertStep = (val) => val * factor;
+      } else {
+        convertStep = () => 0;
+      }
+    }
+
     return steps.map(step => {
-      const converted = getConvertedValue(step, fromUnit, toUnit);
+      const converted = convertStep(step);
       return {
         inputValue: step,
         convertedValue: parseFloat(converted.toFixed(4)),
@@ -346,7 +377,7 @@ export default function App() {
         convertedLabel: `${converted.toFixed(2)} ${toUnit}`
       };
     });
-  }, [category, fromUnit, toUnit, getConvertedValue]);
+  }, [category, fromUnit, toUnit, exchangeRates]);
 
   // Calculator state
   const [calcDisplay, setCalcDisplay] = useState('0');
