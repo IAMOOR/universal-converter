@@ -154,6 +154,10 @@ const CATEGORIES: Record<Category, { icon: any; units: Unit[] }> = {
   },
 };
 
+const CURRENCY_OPTIONS = CATEGORIES['Currency'].units.map(u => (
+  <option key={u.value} value={u.value}>{u.value}</option>
+));
+
 const PRESETS = [
   {
     id: 'cooking',
@@ -1351,9 +1355,7 @@ export default function App() {
                               onChange={(e) => setCalcFromCurrency(e.target.value)}
                               className={`w-full p-2 rounded-xl text-xs font-bold border outline-none transition-colors ${theme === 'high-contrast' ? 'bg-black text-white border-white' : 'bg-white border-slate-200 text-slate-700'}`}
                             >
-                              {CATEGORIES['Currency'].units.map(u => (
-                                <option key={u.value} value={u.value}>{u.value}</option>
-                              ))}
+                              {CURRENCY_OPTIONS}
                             </select>
                           </div>
                           <div className="pt-4 shrink-0">
@@ -1378,9 +1380,7 @@ export default function App() {
                               onChange={(e) => setCalcToCurrency(e.target.value)}
                               className={`w-full p-2 rounded-xl text-xs font-bold border outline-none transition-colors ${theme === 'high-contrast' ? 'bg-black text-white border-white' : 'bg-white border-slate-200 text-slate-700'}`}
                             >
-                              {CATEGORIES['Currency'].units.map(u => (
-                                <option key={u.value} value={u.value}>{u.value}</option>
-                              ))}
+                              {CURRENCY_OPTIONS}
                             </select>
                           </div>
                         </div>
