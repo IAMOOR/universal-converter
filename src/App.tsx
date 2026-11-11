@@ -184,6 +184,15 @@ const PRESETS = [
   }
 ];
 
+const EMPTY_ARRAY: string[] = [];
+
+const CATEGORY_UNIT_MAPS: Record<Category, Map<string, Unit>> = Object.fromEntries(
+  (Object.keys(CATEGORIES) as Category[]).map((cat) => [
+    cat,
+    new Map(CATEGORIES[cat].units.map((u) => [u.value, u])),
+  ])
+) as Record<Category, Map<string, Unit>>;
+
 function Tooltip({ text, theme }: { text: string; theme: Theme }) {
   const [isOpen, setIsOpen] = useState(false);
   const isHighContrast = theme === 'high-contrast';
@@ -242,9 +251,12 @@ export default function App() {
     });
   }, [category]);
 
+  const categoryPinned = pinnedUnits[category] || EMPTY_ARRAY;
+  const pinnedSet = useMemo(() => new Set(categoryPinned), [categoryPinned]);
+
   const isPinned = useCallback((unitValue: string) => {
-    return (pinnedUnits[category] || []).includes(unitValue);
-  }, [pinnedUnits, category]);
+    return pinnedSet.has(unitValue);
+  }, [pinnedSet]);
 
   const currentUnits = useMemo(() => {
     const allUnits = CATEGORIES[category].units;
@@ -256,13 +268,20 @@ export default function App() {
       }
     }
 
-    const pinned = pinnedUnits[category] || [];
-    if (pinned.length === 0) return filtered;
+    if (categoryPinned.length === 0) return filtered;
 
-    const pinnedList = filtered.filter(u => pinned.includes(u.value));
-    const unpinnedList = filtered.filter(u => !pinned.includes(u.value));
+    const pinnedList: Unit[] = [];
+    const unpinnedList: Unit[] = [];
+    for (let i = 0; i < filtered.length; i++) {
+      const u = filtered[i];
+      if (pinnedSet.has(u.value)) {
+        pinnedList.push(u);
+      } else {
+        unpinnedList.push(u);
+      }
+    }
     return [...pinnedList, ...unpinnedList];
-  }, [category, activePreset, pinnedUnits]);
+  }, [category, activePreset, categoryPinned, pinnedSet]);
   const [hapticsEnabled, setHapticsEnabled] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('converter_haptics_enabled');
@@ -864,14 +883,14 @@ export default function App() {
                 </div>
 
                 {/* Favorite Units Quick-Access */}
-                {(pinnedUnits[category] || []).length > 0 && (
+                {categoryPinned.length > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className={`text-[10px] font-bold uppercase tracking-widest ml-1 ${s.label}`}>Favorite Units (Quick Select)</label>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      {(pinnedUnits[category] || []).map((val) => {
-                        const unit = CATEGORIES[category].units.find(u => u.value === val);
+                      {categoryPinned.map((val) => {
+                        const unit = CATEGORY_UNIT_MAPS[category]?.get(val);
                         if (!unit) return null;
                         const isCurrentlyFrom = fromUnit === val;
                         const isCurrentlyTo = toUnit === val;
